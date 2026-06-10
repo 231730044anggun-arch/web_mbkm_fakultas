@@ -223,6 +223,50 @@
         Pedoman & SOP
     </a>
 
+{{-- ================= PEMBIMBING LAPANGAN ================= --}}
+@elseif($role === 'pembimbing_lapangan')
+
+    <a href="{{ route('pembimbing.dashboard') }}"
+       class="nav-link {{ request()->is('pembimbing-lapangan/dashboard') ? 'active' : '' }}">
+        <i class="bi bi-speedometer2 me-2"></i>
+        Dashboard
+    </a>
+
+    <a href="{{ route('pembimbing.mahasiswa.index') }}"
+       class="nav-link {{ request()->is('pembimbing-lapangan/mahasiswa*') ? 'active' : '' }}">
+        <i class="bi bi-people me-2"></i>
+        Mahasiswa Bimbingan
+    </a>
+
+    <a href="{{ route('pembimbing.absensi.index') }}"
+       class="nav-link {{ request()->is('pembimbing-lapangan/absensi*') ? 'active' : '' }}">
+        <i class="bi bi-calendar2-check me-2"></i>
+        Absensi Mahasiswa
+    </a>
+
+    <a href="{{ route('pembimbing.logbook.index') }}"
+       class="nav-link {{ request()->is('pembimbing-lapangan/logbook*') ? 'active' : '' }}">
+        <i class="bi bi-journal-text me-2"></i>
+        Logbook Mahasiswa
+    </a>
+
+    <a href="{{ route('pembimbing.penilaian.index') }}"
+       class="nav-link {{ request()->is('pembimbing-lapangan/penilaian*') ? 'active' : '' }}">
+        <i class="bi bi-star me-2"></i>
+        Penilaian Lapangan
+    </a>
+
+    <a href="{{ route('pedoman.index') }}"
+       class="nav-link {{ request()->is('pedoman*') ? 'active' : '' }}">
+        <i class="bi bi-book me-2"></i>
+        Pedoman & SOP
+    </a>
+
+    <a href="{{ route('profile.show') }}"
+       class="nav-link {{ request()->is('profile*') ? 'active' : '' }}">
+        <i class="bi bi-person me-2"></i>
+        Profile
+    </a>
 {{-- ================= MITRA ================= --}}
 @elseif($role === 'mitra')
 

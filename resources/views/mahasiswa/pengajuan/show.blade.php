@@ -56,9 +56,10 @@
         @if($isSkMagang)
             <tr><td>Nomor Surat Balasan</td><td>{{ $pengajuan->nomor_surat_balasan ?? '-' }}</td></tr>
             <tr><td>Tanggal Surat Balasan</td><td>{{ $pengajuan->tanggal_surat_balasan ?? '-' }}</td></tr>
-            <tr><td>Pembimbing Lapangan</td><td>{{ $pengajuan->mitra->pembimbing_lapangan_nama ?? '-' }}</td></tr>
-            <tr><td>Jabatan Pembimbing</td><td>{{ $pengajuan->mitra->pembimbing_lapangan_jabatan ?? '-' }}</td></tr>
-            <tr><td>Kontak Pembimbing</td><td>{{ $pengajuan->mitra->pembimbing_lapangan_kontak ?? '-' }}</td></tr>
+            <tr><td>Pembimbing Lapangan</td><td>{{ $pengajuan->pembimbingLapangan->nama ?? $pengajuan->pic_nama ?? $pengajuan->mitra->pembimbing_lapangan_nama ?? '-' }}</td></tr>
+            <tr><td>Jabatan Pembimbing</td><td>{{ $pengajuan->pembimbingLapangan->jabatan ?? $pengajuan->pic_jabatan ?? $pengajuan->mitra->pembimbing_lapangan_jabatan ?? '-' }}</td></tr>
+            <tr><td>No HP Pembimbing</td><td>{{ $pengajuan->pembimbingLapangan->no_hp ?? $pengajuan->pic_no_hp ?? $pengajuan->mitra->pembimbing_lapangan_kontak ?? '-' }}</td></tr>
+            <tr><td>Email Pembimbing</td><td>{{ $pengajuan->pembimbingLapangan->email ?? $pengajuan->pic_email ?? $pengajuan->mitra->pembimbing_lapangan_email ?? '-' }}</td></tr>
             <tr><td>Surat Balasan/Bukti Diterima</td><td>
                 @if($hasFile($suratBalasan))
                     <a href="{{ route('mahasiswa.dokumen.preview', $suratBalasan->id) }}" target="_blank">Preview</a>

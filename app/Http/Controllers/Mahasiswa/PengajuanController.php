@@ -78,6 +78,7 @@ class PengajuanController extends Controller
             'nama_pembimbing_lapangan'   => 'nullable|string|max:150',
             'jabatan_pembimbing_lapangan'=> 'nullable|string|max:150',
             'kontak_pembimbing_lapangan' => 'nullable|string|max:150',
+            'email_pembimbing_lapangan' => 'nullable|email|max:150',
             'posisi_magang'              => 'required|string|max:255',
             'tanggal_mulai'              => 'required|date',
             'tanggal_selesai'            => 'required|date|after:tanggal_mulai',
@@ -178,6 +179,7 @@ class PengajuanController extends Controller
             'nama_pembimbing_lapangan' => 'nullable|string|max:150',
             'jabatan_pembimbing_lapangan' => 'nullable|string|max:150',
             'kontak_pembimbing_lapangan' => 'nullable|string|max:150',
+            'email_pembimbing_lapangan' => 'nullable|email|max:150',
             'catatan_mahasiswa' => 'nullable|string|max:500',
         ]);
 
@@ -214,7 +216,8 @@ class PengajuanController extends Controller
             'pic_nama' => $request->nama_pembimbing_lapangan,
             'pic_jabatan' => $request->jabatan_pembimbing_lapangan,
             'pic_no_hp' => $request->kontak_pembimbing_lapangan,
-        ]);
+                    'pic_email' => $request->email_pembimbing_lapangan,
+]);
 
         $filePath = $request->file('file')->store('documents/surat-balasan', 'public');
         Dokumen::create([
@@ -239,7 +242,8 @@ class PengajuanController extends Controller
                 'pembimbing_lapangan_nama' => $request->nama_pembimbing_lapangan ?: $pengajuan->mitra->pembimbing_lapangan_nama,
                 'pembimbing_lapangan_jabatan' => $request->jabatan_pembimbing_lapangan ?: $pengajuan->mitra->pembimbing_lapangan_jabatan,
                 'pembimbing_lapangan_kontak' => $request->kontak_pembimbing_lapangan ?: $pengajuan->mitra->pembimbing_lapangan_kontak,
-            ]);
+                            'pembimbing_lapangan_email' => $request->email_pembimbing_lapangan ?: $pengajuan->mitra->pembimbing_lapangan_email,
+]);
         }
 
         foreach (User::whereIn('role', ['admin','superadmin'])->get() as $admin) {

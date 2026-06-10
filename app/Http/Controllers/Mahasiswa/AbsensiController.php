@@ -75,6 +75,7 @@ class AbsensiController extends Controller
                 'jam_pulang' => $request->jam_pulang,
                 'keterangan' => $request->keterangan,
                 'bukti_hadir' => $path,
+                'pembimbing_lapangan_id' => $pengajuan->pembimbing_lapangan_id,
                 'status' => 'pending',
                 'catatan_mitra' => null,
                 'validated_by' => null,
@@ -86,25 +87,37 @@ class AbsensiController extends Controller
                 'pengajuan_magang_id' => $pengajuan->id,
                 'mahasiswa_id' => $pengajuan->mahasiswa_id,
                 'mitra_id' => $pengajuan->mitra_id,
+                'pembimbing_lapangan_id' => $pengajuan->pembimbing_lapangan_id,
                 'tanggal' => $request->tanggal,
                 'jam_masuk' => $request->jam_masuk,
                 'jam_pulang' => $request->jam_pulang,
                 'keterangan' => $request->keterangan,
                 'bukti_hadir' => $path,
+                'pembimbing_lapangan_id' => $pengajuan->pembimbing_lapangan_id,
                 'status' => 'pending',
             ]);
         }
 
-        $pengajuan->loadMissing('mahasiswa', 'mitra.mitraUsers.user');
-        foreach (($pengajuan->mitra?->mitraUsers ?? collect()) as $mitraUser) {
-            if ($mitraUser->user) {
-                Notifikasi::create([
-                    'user_id' => $mitraUser->user->id,
-                    'judul' => 'Absensi Magang Baru',
-                    'pesan' => 'Mahasiswa ' . ($pengajuan->mahasiswa->nama_lengkap ?? '-') . ' menginput absensi tanggal ' . $absensi->tanggal->format('Y-m-d') . '.',
-                    'status' => 'belum',
-                    'target_url' => route('mitra.absensi.index'),
-                ]);
+        $pengajuan->loadMissing('mahasiswa', 'pembimbingLapangan.user', 'mitra.mitraUsers.user');
+        if ($pengajuan->pembimbingLapangan?->user) {
+            Notifikasi::create([
+                'user_id' => $pengajuan->pembimbingLapangan->user->id,
+                'judul' => 'Absensi Magang Baru',
+                'pesan' => 'Mahasiswa ' . ($pengajuan->mahasiswa->nama_lengkap ?? '-') . ' menginput absensi tanggal ' . $absensi->tanggal->format('Y-m-d') . '.',
+                'status' => 'belum',
+                'target_url' => route('pembimbing.absensi.index'),
+            ]);
+        } else {
+            foreach (($pengajuan->mitra?->mitraUsers ?? collect()) as $mitraUser) {
+                if ($mitraUser->user) {
+                    Notifikasi::create([
+                        'user_id' => $mitraUser->user->id,
+                        'judul' => 'Absensi Magang Baru',
+                        'pesan' => 'Mahasiswa ' . ($pengajuan->mahasiswa->nama_lengkap ?? '-') . ' menginput absensi tanggal ' . $absensi->tanggal->format('Y-m-d') . '.',
+                        'status' => 'belum',
+                        'target_url' => route('mitra.absensi.index'),
+                    ]);
+                }
             }
         }
 
@@ -123,11 +136,12 @@ class AbsensiController extends Controller
 
     private function activePengajuan(): ?PengajuanMagang
     {
-        return PengajuanMagang::with(['mahasiswa', 'mitra.mitraUsers.user', 'absensis'])
+        return PengajuanMagang::with(['mahasiswa', 'mitra.mitraUsers.user', 'pembimbingLapangan.user', 'absensis'])
             ->where('mahasiswa_id', auth()->user()->mahasiswaProfile?->id)
             ->where('jenis_pengajuan', 'surat_keterangan')
             ->where('status_pengajuan', 'berjalan')
             ->whereNotNull('mitra_id')
+            ->whereNotNull('pembimbing_lapangan_id')
             ->whereNotNull('tanggal_mulai')
             ->whereNotNull('tanggal_selesai')
             ->latest('updated_at')

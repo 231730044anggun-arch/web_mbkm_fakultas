@@ -33,6 +33,11 @@ use App\Http\Controllers\Mitra\DashboardController as MitraDashboard;
 use App\Http\Controllers\Mitra\PengajuanController as MitraPengajuan;
 use App\Http\Controllers\Mitra\PenilaianController as MitraPenilaian;
 use App\Http\Controllers\Mitra\LogbookController as MitraLogbook;
+use App\Http\Controllers\Pembimbing\DashboardController as PembimbingDashboard;
+use App\Http\Controllers\Pembimbing\MahasiswaController as PembimbingMahasiswa;
+use App\Http\Controllers\Pembimbing\AbsensiController as PembimbingAbsensi;
+use App\Http\Controllers\Pembimbing\LogbookController as PembimbingLogbook;
+use App\Http\Controllers\Pembimbing\PenilaianController as PembimbingPenilaian;
 use App\Http\Controllers\Mitra\AbsensiController as MitraAbsensi;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\NotifikasiController;
@@ -51,7 +56,7 @@ Route::get('/dashboard', function () {
         'mahasiswa'           => redirect()->route('mahasiswa.dashboard'),
         'dosen'               => redirect()->route('dosen.dashboard'),
         'mitra'               => redirect()->route('mitra.dashboard'),
-        'pembimbing_lapangan'=> redirect()->route('profile.show'),
+        'pembimbing_lapangan'=> redirect()->route('pembimbing.dashboard'),
         default               => redirect('/'),
     };
 })->middleware('auth')->name('dashboard');
@@ -177,6 +182,21 @@ Route::prefix('dosen')->middleware(['auth', 'role:dosen'])->name('dosen.')->grou
 });
 
 // ============ MITRA ============
+Route::prefix('pembimbing-lapangan')->middleware(['auth', 'role:pembimbing_lapangan'])->name('pembimbing.')->group(function () {
+    Route::get('/dashboard', [PembimbingDashboard::class, 'index'])->name('dashboard');
+    Route::get('/mahasiswa', [PembimbingMahasiswa::class, 'index'])->name('mahasiswa.index');
+    Route::get('/mahasiswa/{pengajuanId}', [PembimbingMahasiswa::class, 'show'])->name('mahasiswa.show');
+    Route::get('/absensi', [PembimbingAbsensi::class, 'index'])->name('absensi.index');
+    Route::post('/absensi/{absensi}/validasi', [PembimbingAbsensi::class, 'validasi'])->name('absensi.validasi');
+    Route::get('/absensi/{absensi}/preview', [PembimbingAbsensi::class, 'preview'])->name('absensi.preview');
+    Route::get('/logbook', [PembimbingLogbook::class, 'index'])->name('logbook.index');
+    Route::get('/logbook/{pengajuanId}', [PembimbingLogbook::class, 'show'])->name('logbook.show');
+    Route::post('/logbook/{id}/validasi', [PembimbingLogbook::class, 'validasi'])->name('logbook.validasi');
+    Route::get('/logbook/foto/{logbook}/preview', [PembimbingLogbook::class, 'previewFoto'])->name('logbook.foto.preview');
+    Route::get('/penilaian', [PembimbingPenilaian::class, 'index'])->name('penilaian.index');
+    Route::get('/penilaian/{pengajuanId}', [PembimbingPenilaian::class, 'create'])->name('penilaian.create');
+    Route::post('/penilaian/{pengajuanId}', [PembimbingPenilaian::class, 'store'])->name('penilaian.store');
+});
 Route::prefix('mitra')->middleware(['auth', 'role:mitra'])->name('mitra.')->group(function () {
     Route::get('/dashboard', [MitraDashboard::class, 'index'])->name('dashboard');
     Route::get('/pengajuan', [MitraPengajuan::class, 'index'])->name('pengajuan.index');

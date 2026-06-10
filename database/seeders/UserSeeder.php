@@ -7,7 +7,7 @@ use App\Models\MahasiswaProfile;
 use App\Models\Dosen;
 use App\Models\Fakultas;
 use App\Models\Mitra;
-use App\Models\MitraUser;
+use App\Models\PembimbingLapangan;
 use App\Models\Periode;
 use App\Models\Prodi;
 use Illuminate\Support\Facades\Hash;
@@ -155,21 +155,28 @@ class UserSeeder extends Seeder
             ]
         );
 
-        $mitraUser = User::updateOrCreate(
-            ['email' => 'mitra@mbkm.ac.id'],
+        $pembimbingUser = User::updateOrCreate(
+            ['email' => 'pembimbing@mbkm.ac.id'],
             [
-                'name' => 'PIC PT Inovasi Digital Nusantara',
+                'name' => 'Rina Pratiwi',
                 'password' => Hash::make('password'),
-                'role' => 'mitra',
+                'role' => 'pembimbing_lapangan',
                 'status' => 'aktif',
             ]
         );
 
-        MitraUser::updateOrCreate(
-            ['user_id' => $mitraUser->id],
+        PembimbingLapangan::updateOrCreate(
+            ['email' => 'pembimbing@mbkm.ac.id'],
             [
+                'user_id' => $pembimbingUser->id,
                 'mitra_id' => $mitraBerMou->id,
-                'jabatan' => 'PIC Magang',
+                'nama' => 'Rina Pratiwi',
+                'jabatan' => 'HR Manager',
+                'no_hp' => '081200000001',
+                'instansi' => $mitraBerMou->nama_instansi,
+                'status' => 'aktif',
+                'profile_status' => 'lengkap',
+                'email_akses_terkirim' => false,
             ]
         );
     }

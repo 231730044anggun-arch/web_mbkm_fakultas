@@ -10,6 +10,7 @@ class AbsensiMagang extends Model
         'pengajuan_magang_id',
         'mahasiswa_id',
         'mitra_id',
+        'pembimbing_lapangan_id',
         'tanggal',
         'jam_masuk',
         'jam_pulang',
@@ -39,6 +40,11 @@ class AbsensiMagang extends Model
     public function mitra()
     {
         return $this->belongsTo(Mitra::class, 'mitra_id');
+    }
+
+    public function pembimbingLapangan()
+    {
+        return $this->belongsTo(PembimbingLapangan::class, 'pembimbing_lapangan_id');
     }
 
     public function validator()

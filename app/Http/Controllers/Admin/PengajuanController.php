@@ -10,6 +10,10 @@ use App\Models\StatusHistory;
 use App\Models\Dokumen;
 use App\Models\Notifikasi;
 use App\Models\User;
+use App\Models\PembimbingLapangan;
+use App\Mail\PembimbingLapanganAccountMail;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
@@ -27,7 +31,7 @@ class PengajuanController extends Controller
     public function show($id)
     {
         $pengajuan = PengajuanMagang::with([
-            'mahasiswa.user', 'periode', 'mitra', 'dokumens', 'bimbingans.dosen',
+            'mahasiswa.user', 'periode', 'mitra', 'pembimbingLapangan.user', 'dokumens', 'bimbingans.dosen',
             'pengajuanAwal.periode', 'pengajuanAwal.mitra', 'pengajuanAwal.dokumens'
         ])->findOrFail($id);
         $dosens = Dosen::with('user')->where('status_dosen', 'aktif')->get();
@@ -98,6 +102,19 @@ class PengajuanController extends Controller
                     ->withInput()
                     ->with('error', 'Pilih atau hubungkan mitra terlebih dahulu sebelum menerbitkan Surat Keterangan Magang.');
             }
+
+            if ($request->filled('mitra_id')) {
+                $pengajuan->mitra_id = $request->mitra_id;
+                $pengajuan->save();
+                $pengajuan->load('mitra');
+            }
+
+            $pembimbingResult = $this->ensurePembimbingLapanganAccount($pengajuan);
+            if (!$pengajuan->fresh()->pembimbing_lapangan_id) {
+                return redirect()->back()
+                    ->withInput()
+                    ->with('error', $pembimbingResult['message'] ?? 'Pembimbing Lapangan belum dapat dihubungkan. Lengkapi nama dan email pembimbing lapangan pada Pengajuan SK Magang.');
+            }
         }
 
         if ($pengajuan->jenis_pengajuan === 'surat_keterangan' && $request->filled('mitra_id')) {
@@ -118,7 +135,8 @@ class PengajuanController extends Controller
 
         if ($pengajuan->jenis_pengajuan === 'surat_keterangan' && $request->input('status') === 'disetujui') {
             $this->activateMitraAfterAcceptance($pengajuan);
-            $accountMessage = $this->ensureMitraUserAccount($pengajuan);
+            $pembimbingResult = $this->ensurePembimbingLapanganAccount($pengajuan);
+            $accountMessage = $pembimbingResult['message'] ?? null;
         }
 
         if ($pengajuan->jenis_pengajuan === 'surat_pengantar' && $request->hasFile('surat_pengantar_file')) {
@@ -218,7 +236,7 @@ class PengajuanController extends Controller
         abort_unless($pengajuan->jenis_pengajuan === 'surat_keterangan', 422, 'Mitra hanya dihubungkan pada Pengajuan SK Magang.');
 
         $pengajuan->update(['mitra_id' => $request->mitra_id]);
-        $pengajuan->load('mahasiswa', 'mitra.mitraUsers.user');
+        $pengajuan->load('mahasiswa', 'mitra.mitraUsers.user', 'pembimbingLapangan.user');
 
         if ($pengajuan->mitra) {
             foreach ($pengajuan->mitra->mitraUsers as $mitraUser) {
@@ -370,59 +388,86 @@ class PengajuanController extends Controller
         );
     }
 
-    private function ensureMitraUserAccount(PengajuanMagang $pengajuan): ?string
+    private function ensurePembimbingLapanganAccount(PengajuanMagang $pengajuan): array
     {
-        $pengajuan->loadMissing(['mitra.mitraUsers.user', 'mahasiswa']);
+        $pengajuan->loadMissing(['mitra', 'mahasiswa.prodi', 'pembimbingLapangan.user']);
         $mitra = $pengajuan->mitra;
         if (!$mitra) {
-            return null;
+            return ['message' => 'Pembimbing Lapangan belum dibuat karena mitra/instansi belum terhubung.'];
         }
 
-        $existing = $mitra->mitraUsers()->with('user')->first();
-        if ($existing?->user) {
-            Notifikasi::create([
-                'user_id' => $existing->user->id,
-                'judul' => 'Mahasiswa Magang Terhubung',
-                'pesan' => 'Mahasiswa ' . ($pengajuan->mahasiswa->nama_lengkap ?? '-') . ' terhubung ke instansi Anda.',
-                'status' => 'belum',
-                'target_url' => route('mitra.pengajuan.show', $pengajuan->id),
-            ]);
-            return 'Akun mitra yang sudah ada digunakan: ' . $existing->user->email . '.';
+        $nama = $pengajuan->pic_nama ?: $mitra->pembimbing_lapangan_nama;
+        $email = $pengajuan->pic_email ?: $mitra->pembimbing_lapangan_email;
+        $noHp = $pengajuan->pic_no_hp ?: $mitra->pembimbing_lapangan_kontak;
+        $jabatan = $pengajuan->pic_jabatan ?: $mitra->pembimbing_lapangan_jabatan;
+
+        if (!filled($nama) || !filled($email)) {
+            return ['message' => 'Pembimbing Lapangan belum dibuat karena nama atau email pembimbing belum lengkap.'];
         }
 
-        if (!$mitra->email) {
-            return 'Akun mitra belum dibuat karena email instansi belum tersedia.';
+        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            return ['message' => 'Email Pembimbing Lapangan tidak valid. Periksa kembali data pembimbing pada Pengajuan SK Magang.'];
         }
 
-        $user = User::where('email', $mitra->email)->first();
-        if ($user && $user->role !== 'mitra') {
-            return 'Email instansi sudah digunakan oleh role lain, akun mitra otomatis tidak dibuat.';
+        $password = '12345678';
+        $user = User::where('email', $email)->first();
+        if ($user && $user->role !== 'pembimbing_lapangan') {
+            return ['message' => 'Email Pembimbing Lapangan sudah digunakan oleh role lain. Silakan admin cek email: ' . $email . '.'];
         }
 
+        $createdUser = false;
         if (!$user) {
             $user = User::create([
-                'name' => $mitra->nama_instansi,
-                'email' => $mitra->email,
-                'password' => \Illuminate\Support\Facades\Hash::make('12345678'),
-                'role' => 'mitra',
+                'name' => $nama,
+                'email' => $email,
+                'password' => Hash::make($password),
+                'role' => 'pembimbing_lapangan',
                 'status' => 'aktif',
             ]);
+            $createdUser = true;
+        } else {
+            $user->update(['name' => $nama, 'status' => 'aktif']);
         }
 
-        \App\Models\MitraUser::firstOrCreate(
-            ['user_id' => $user->id, 'mitra_id' => $mitra->id],
-            ['jabatan' => 'PIC Instansi']
-        );
+        $pembimbing = PembimbingLapangan::firstOrNew(['email' => $email]);
+        $pembimbing->fill([
+            'user_id' => $user->id,
+            'mitra_id' => $mitra->id,
+            'pengajuan_id' => $pembimbing->pengajuan_id ?: $pengajuan->id,
+            'nama' => $nama,
+            'jabatan' => $jabatan,
+            'email' => $email,
+            'no_hp' => $noHp,
+            'instansi' => $mitra->nama_instansi,
+            'status' => 'aktif',
+        ]);
+        $pembimbing->syncProfileStatus();
+        $pembimbing->save();
+
+        $pengajuan->update(['pembimbing_lapangan_id' => $pembimbing->id]);
+        $pengajuan->absensis()->whereNull('pembimbing_lapangan_id')->update(['pembimbing_lapangan_id' => $pembimbing->id]);
 
         Notifikasi::create([
             'user_id' => $user->id,
-            'judul' => 'Mahasiswa Magang Terhubung',
-            'pesan' => 'Mahasiswa ' . ($pengajuan->mahasiswa->nama_lengkap ?? '-') . ' terhubung ke instansi Anda.',
+            'judul' => 'Mahasiswa Bimbingan Terhubung',
+            'pesan' => 'Mahasiswa ' . ($pengajuan->mahasiswa->nama_lengkap ?? '-') . ' terhubung sebagai mahasiswa bimbingan lapangan Anda.',
             'status' => 'belum',
-            'target_url' => route('mitra.pengajuan.show', $pengajuan->id),
+            'target_url' => route('pembimbing.mahasiswa.show', $pengajuan->id),
         ]);
 
-        return 'Akun mitra berhasil dibuat: ' . $user->email . ' dengan password awal 12345678.';
+        $emailMessage = '';
+        try {
+            Mail::to($email)->send(new PembimbingLapanganAccountMail($pembimbing, $pengajuan, $password));
+            $pembimbing->update(['email_akses_terkirim' => true, 'last_email_sent_at' => now()]);
+            $emailMessage = ' Email akses berhasil dikirim.';
+        } catch (\Throwable $e) {
+            $emailMessage = ' Akun dibuat/terhubung, tetapi email akses gagal dikirim. Cek konfigurasi MAIL di .env.';
+        }
+
+        return [
+            'pembimbing' => $pembimbing,
+            'message' => ($createdUser ? 'Akun Pembimbing Lapangan berhasil dibuat: ' : 'Akun Pembimbing Lapangan berhasil dihubungkan: ') . $email . ' dengan password awal 12345678.' . $emailMessage,
+        ];
     }
     private function activateMitraAfterAcceptance(PengajuanMagang $pengajuan): void
     {
@@ -454,7 +499,7 @@ class PengajuanController extends Controller
     private function notifyBimbinganAndDocument(PengajuanMagang $pengajuan, string $judul, string $pesan): void
     {
         $this->notifyMahasiswa($pengajuan, $judul, $pesan, route('mahasiswa.dokumen.index', $pengajuan->id));
-        $pengajuan->loadMissing('bimbingans.dosen.user');
+        $pengajuan->loadMissing('bimbingans.dosen.user', 'pembimbingLapangan.user');
         foreach ($pengajuan->bimbingans as $bimbingan) {
             if ($bimbingan->dosen?->user) {
                 Notifikasi::create([
@@ -465,6 +510,15 @@ class PengajuanController extends Controller
                     'target_url' => route('dosen.bimbingan.index'),
                 ]);
             }
+        }
+        if ($pengajuan->pembimbingLapangan?->user) {
+            Notifikasi::create([
+                'user_id' => $pengajuan->pembimbingLapangan->user->id,
+                'judul' => $judul,
+                'pesan' => $pesan . ' Mahasiswa: ' . ($pengajuan->mahasiswa->nama_lengkap ?? '-'),
+                'status' => 'belum',
+                'target_url' => route('pembimbing.mahasiswa.show', $pengajuan->id),
+            ]);
         }
     }
 

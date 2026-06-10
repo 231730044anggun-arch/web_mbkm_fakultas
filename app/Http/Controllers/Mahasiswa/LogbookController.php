@@ -70,7 +70,7 @@ class LogbookController extends Controller
             'catatan_mitra'    => null,
         ]);
 
-        $pengajuan->loadMissing('mahasiswa', 'bimbingans.dosen.user', 'mitra.mitraUsers.user');
+        $pengajuan->loadMissing('mahasiswa', 'bimbingans.dosen.user', 'pembimbingLapangan.user', 'mitra.mitraUsers.user');
         foreach ($pengajuan->bimbingans as $bimbingan) {
             if ($bimbingan->dosen?->user) {
                 Notifikasi::create([
@@ -83,15 +83,25 @@ class LogbookController extends Controller
             }
         }
 
-        foreach (($pengajuan->mitra?->mitraUsers ?? collect()) as $mitraUser) {
-            if ($mitraUser->user) {
-                Notifikasi::create([
-                    'user_id' => $mitraUser->user->id,
-                    'judul' => 'Logbook Baru Mahasiswa Magang',
-                    'pesan' => 'Mahasiswa ' . ($pengajuan->mahasiswa->nama_lengkap ?? '-') . ' menginput logbook tanggal ' . $logbook->tanggal . '.',
-                    'status' => 'belum',
-                    'target_url' => route('mitra.logbook.show', $pengajuan->id),
-                ]);
+        if ($pengajuan->pembimbingLapangan?->user) {
+            Notifikasi::create([
+                'user_id' => $pengajuan->pembimbingLapangan->user->id,
+                'judul' => 'Logbook Baru Mahasiswa Magang',
+                'pesan' => 'Mahasiswa ' . ($pengajuan->mahasiswa->nama_lengkap ?? '-') . ' menginput logbook tanggal ' . $logbook->tanggal . '.',
+                'status' => 'belum',
+                'target_url' => route('pembimbing.logbook.show', $pengajuan->id),
+            ]);
+        } else {
+            foreach (($pengajuan->mitra?->mitraUsers ?? collect()) as $mitraUser) {
+                if ($mitraUser->user) {
+                    Notifikasi::create([
+                        'user_id' => $mitraUser->user->id,
+                        'judul' => 'Logbook Baru Mahasiswa Magang',
+                        'pesan' => 'Mahasiswa ' . ($pengajuan->mahasiswa->nama_lengkap ?? '-') . ' menginput logbook tanggal ' . $logbook->tanggal . '.',
+                        'status' => 'belum',
+                        'target_url' => route('mitra.logbook.show', $pengajuan->id),
+                    ]);
+                }
             }
         }
 

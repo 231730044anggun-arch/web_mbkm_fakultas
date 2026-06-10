@@ -88,6 +88,11 @@
                 <label class="form-label fw-semibold">Kontak Pembimbing Lapangan</label>
                 <input type="text" name="kontak_pembimbing_lapangan" class="form-control" value="{{ old('kontak_pembimbing_lapangan') }}">
             </div>
+            <div class="col-md-4">
+                <label class="form-label fw-semibold">Email Pembimbing Lapangan</label>
+                <input type="email" name="email_pembimbing_lapangan" class="form-control" value="{{ old('email_pembimbing_lapangan') }}" placeholder="email@instansi.ac.id">
+                <small class="text-muted">Digunakan admin untuk membuat akun Pembimbing Lapangan.</small>
+            </div>
             <div class="col-12">
                 <label class="form-label fw-semibold">Catatan Tambahan</label>
                 <textarea name="catatan_mahasiswa" class="form-control" rows="2">{{ old('catatan_mahasiswa') }}</textarea>

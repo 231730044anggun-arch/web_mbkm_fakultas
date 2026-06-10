@@ -52,9 +52,18 @@
                     </td></tr>
                     <tr><td>Nomor Surat Balasan</td><td>{{ $pengajuan->nomor_surat_balasan ?? '-' }}</td></tr>
                     <tr><td>Tanggal Surat Balasan</td><td>{{ $pengajuan->tanggal_surat_balasan ?? '-' }}</td></tr>
-                    <tr><td>Pembimbing Lapangan</td><td>{{ $pengajuan->mitra->pembimbing_lapangan_nama ?? '-' }}</td></tr>
-                    <tr><td>Jabatan Pembimbing</td><td>{{ $pengajuan->mitra->pembimbing_lapangan_jabatan ?? '-' }}</td></tr>
-                    <tr><td>Kontak Pembimbing</td><td>{{ $pengajuan->mitra->pembimbing_lapangan_kontak ?? '-' }}</td></tr>
+                    <tr><td>Pembimbing Lapangan</td><td>{{ $pengajuan->pembimbingLapangan->nama ?? $pengajuan->pic_nama ?? $pengajuan->mitra->pembimbing_lapangan_nama ?? '-' }}</td></tr>
+                    <tr><td>Jabatan Pembimbing</td><td>{{ $pengajuan->pembimbingLapangan->jabatan ?? $pengajuan->pic_jabatan ?? $pengajuan->mitra->pembimbing_lapangan_jabatan ?? '-' }}</td></tr>
+                    <tr><td>Kontak Pembimbing</td><td>{{ $pengajuan->pembimbingLapangan->no_hp ?? $pengajuan->pic_no_hp ?? $pengajuan->mitra->pembimbing_lapangan_kontak ?? '-' }}</td></tr>
+                    <tr><td>Email Pembimbing</td><td>{{ $pengajuan->pembimbingLapangan->email ?? $pengajuan->pic_email ?? $pengajuan->mitra->pembimbing_lapangan_email ?? '-' }}</td></tr>
+                    <tr><td>Status Akun Pembimbing</td><td>
+                        @if($pengajuan->pembimbingLapangan?->user)
+                            <span class="badge bg-{{ $pengajuan->pembimbingLapangan->user->status === 'aktif' ? 'success' : 'secondary' }}">{{ $pengajuan->pembimbingLapangan->user->status }}</span>
+                            <div class="small text-muted mt-1">Email akses: {{ $pengajuan->pembimbingLapangan->email_akses_terkirim ? 'sudah dikirim' : 'belum/gagal dikirim' }}</div>
+                        @else
+                            <span class="badge bg-light text-dark border">Belum dibuat/terhubung</span>
+                        @endif
+                    </td></tr>
                 @endif
                 <tr><td>Status</td><td><span class="badge bg-warning">{{ $pengajuan->status_pengajuan }}</span></td></tr>
                 @if($pengajuan->catatan_admin)
