@@ -34,7 +34,7 @@ class PengajuanMagang extends Model
 
     public function hasValidSeminar(): bool
     {
-        return in_array($this->status_seminar, ['pending', 'menunggu', 'terjadwal', 'selesai'], true);
+        return in_array($this->status_seminar, ['menunggu_jadwal', 'terjadwal', 'selesai', 'ditunda'], true);
     }
 
     public function nilaiFinalLengkap(): bool

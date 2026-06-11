@@ -13,9 +13,9 @@ class SeminarController extends Controller
 {
     public function index()
     {
-        $pengajuans = PengajuanMagang::with(['mahasiswa.user', 'mitra', 'periode', 'bimbingans.dosen'])
+        $pengajuans = PengajuanMagang::with(['mahasiswa.user', 'mitra', 'periode', 'bimbingans.dosen.user', 'pembimbingLapangan.user', 'kelayakanSeminar'])
             ->whereNotNull('status_seminar')
-            ->where('status_seminar', '!=', 'belum')
+            ->whereIn('status_seminar', ['menunggu_jadwal', 'terjadwal', 'selesai', 'ditunda', 'dibatalkan'])
             ->latest()
             ->paginate(15);
         $dosens = Dosen::orderBy('nama_dosen')->get();
@@ -30,11 +30,11 @@ class SeminarController extends Controller
             'seminar_tanggal' => 'required|date',
             'seminar_jam' => 'required|string|max:20',
             'seminar_ruangan' => 'required|string|max:120',
-            'status_seminar' => 'required|in:terjadwal,selesai,ditunda',
+            'status_seminar' => 'required|in:terjadwal,selesai,ditunda,dibatalkan',
             'catatan' => 'nullable|string|max:500',
         ]);
 
-        $pengajuan = PengajuanMagang::with('mahasiswa.user')->findOrFail($id);
+        $pengajuan = PengajuanMagang::with(['mahasiswa.user', 'bimbingans.dosen.user', 'pembimbingLapangan.user', 'kelayakanSeminar'])->findOrFail($id);
         $pengajuan->update([
             'judul_laporan' => $request->judul_laporan,
             'seminar_tanggal' => $request->seminar_tanggal,
@@ -60,6 +60,26 @@ class SeminarController extends Controller
                 'target_url' => route('mahasiswa.seminar.index'),
             ]);
         }
+        foreach ($pengajuan->bimbingans as $bimbingan) {
+            if ($bimbingan->dosen?->user) {
+                Notifikasi::create([
+                    'user_id' => $bimbingan->dosen->user->id,
+                    'judul' => 'Jadwal Seminar Mahasiswa Bimbingan',
+                    'pesan' => 'Seminar mahasiswa ' . ($pengajuan->mahasiswa->nama_lengkap ?? '-') . ' berstatus ' . $request->status_seminar . '.',
+                    'status' => 'belum',
+                    'target_url' => route('dosen.seminar.index'),
+                ]);
+            }
+        }
+        if ($pengajuan->pembimbingLapangan?->user) {
+            Notifikasi::create([
+                'user_id' => $pengajuan->pembimbingLapangan->user->id,
+                'judul' => 'Jadwal Seminar Mahasiswa Bimbingan',
+                'pesan' => 'Seminar mahasiswa ' . ($pengajuan->mahasiswa->nama_lengkap ?? '-') . ' berstatus ' . $request->status_seminar . '.',
+                'status' => 'belum',
+                'target_url' => route('pembimbing.seminar.index'),
+            ]);
+        }
 
         if (in_array($request->status_seminar, ['terjadwal', 'selesai'], true)) {
             $this->generateSuratSeminar($pengajuan);
@@ -71,11 +91,11 @@ class SeminarController extends Controller
     public function reject(Request $request, $id)
     {
         $request->validate([
-            'status_seminar' => 'required|in:ditolak,revisi,ditunda,dibatalkan',
+            'status_seminar' => 'required|in:ditunda,dibatalkan',
             'catatan' => 'required|string|max:500',
         ]);
 
-        $pengajuan = PengajuanMagang::with('mahasiswa.user')->findOrFail($id);
+        $pengajuan = PengajuanMagang::with(['mahasiswa.user', 'bimbingans.dosen.user', 'pembimbingLapangan.user', 'kelayakanSeminar'])->findOrFail($id);
         $pengajuan->update([
             'status_seminar' => $request->status_seminar,
             'catatan_admin' => $request->catatan,
@@ -107,7 +127,7 @@ class SeminarController extends Controller
             'catatan' => 'required|string|max:500',
         ]);
 
-        $pengajuan = PengajuanMagang::with('mahasiswa.user')->findOrFail($id);
+        $pengajuan = PengajuanMagang::with(['mahasiswa.user', 'bimbingans.dosen.user', 'pembimbingLapangan.user', 'kelayakanSeminar'])->findOrFail($id);
         if ($pengajuan->status_seminar === 'selesai' || $pengajuan->penilaian()->exists()) {
             return redirect()->back()->with('error', 'Seminar tidak dapat dibatalkan karena sudah selesai atau nilai sudah masuk.');
         }

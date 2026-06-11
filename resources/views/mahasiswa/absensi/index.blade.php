@@ -36,13 +36,7 @@
     <form action="{{ route('mahasiswa.absensi.store') }}" method="POST" enctype="multipart/form-data">
         @csrf
         <div class="row g-3">
-            <div class="col-md-3">
-                <label class="form-label">Tanggal Hadir</label>
-                <input type="date" name="tanggal" class="form-control @error('tanggal') is-invalid @enderror" value="{{ old('tanggal') }}" required>
-                @error('tanggal')<div class="invalid-feedback">{{ $message }}</div>@enderror
-            </div>
-            <div class="col-md-3">
-                <label class="form-label">Jam Masuk</label>
+            <div class="col-md-3"><label class="form-label">Tanggal Hadir</label><input type="text" class="form-control" value="{{ now()->toDateString() }}" disabled><small class="text-muted">Tanggal absensi otomatis mengikuti tanggal hari ini dan tidak dapat diubah.</small></div><div class="col-md-3"><label class="form-label">Jam Masuk</label>
                 <input type="time" name="jam_masuk" class="form-control @error('jam_masuk') is-invalid @enderror" value="{{ old('jam_masuk') }}" required>
                 @error('jam_masuk')<div class="invalid-feedback">{{ $message }}</div>@enderror
             </div>

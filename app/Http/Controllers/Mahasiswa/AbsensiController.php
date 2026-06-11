@@ -42,21 +42,26 @@ class AbsensiController extends Controller
             return redirect()->route('mahasiswa.absensi.index')->with('error', 'Absensi belum dapat diisi karena SK Magang belum berjalan atau mitra belum terhubung.');
         }
 
+        $tanggalHariIni = now()->toDateString();
+        if ($pengajuan->tanggal_mulai && $tanggalHariIni < $pengajuan->tanggal_mulai) {
+            return redirect()->back()->withInput()->with('error', 'Absensi belum dapat diisi sebelum tanggal mulai magang.');
+        }
+        if ($pengajuan->tanggal_selesai && $tanggalHariIni > $pengajuan->tanggal_selesai) {
+            return redirect()->back()->withInput()->with('error', 'Absensi tidak dapat diisi setelah tanggal selesai magang.');
+        }
+
         $request->validate([
-            'tanggal' => 'required|date|after_or_equal:' . $pengajuan->tanggal_mulai . '|before_or_equal:' . $pengajuan->tanggal_selesai,
             'jam_masuk' => 'required',
             'jam_pulang' => 'nullable|after:jam_masuk',
             'keterangan' => 'nullable|string|max:500',
             'bukti_hadir' => 'required|file|mimes:jpg,jpeg,png,pdf|max:5120',
         ], [
-            'tanggal.after_or_equal' => 'Tanggal hadir tidak boleh sebelum tanggal mulai magang.',
-            'tanggal.before_or_equal' => 'Tanggal hadir tidak boleh melewati tanggal selesai magang.',
             'bukti_hadir.required' => 'Bukti hadir wajib diupload.',
             'bukti_hadir.mimes' => 'Bukti hadir harus berupa JPG, PNG, atau PDF.',
         ]);
 
         $existing = AbsensiMagang::where('pengajuan_magang_id', $pengajuan->id)
-            ->whereDate('tanggal', $request->tanggal)
+            ->whereDate('tanggal', $tanggalHariIni)
             ->first();
 
         if ($existing && !in_array($existing->status, ['revisi', 'ditolak'], true)) {
@@ -88,7 +93,7 @@ class AbsensiController extends Controller
                 'mahasiswa_id' => $pengajuan->mahasiswa_id,
                 'mitra_id' => $pengajuan->mitra_id,
                 'pembimbing_lapangan_id' => $pengajuan->pembimbing_lapangan_id,
-                'tanggal' => $request->tanggal,
+                'tanggal' => $tanggalHariIni,
                 'jam_masuk' => $request->jam_masuk,
                 'jam_pulang' => $request->jam_pulang,
                 'keterangan' => $request->keterangan,

@@ -255,6 +255,11 @@
         <i class="bi bi-star me-2"></i>
         Penilaian Lapangan
     </a>
+    <a href="{{ route('pembimbing.seminar.index') }}"
+       class="nav-link {{ request()->is('pembimbing-lapangan/seminar*') ? 'active' : '' }}">
+        <i class="bi bi-calendar-check me-2"></i>
+        Seminar Magang
+    </a>
 
     <a href="{{ route('pedoman.index') }}"
        class="nav-link {{ request()->is('pedoman*') ? 'active' : '' }}">

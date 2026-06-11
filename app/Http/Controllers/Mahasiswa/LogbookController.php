@@ -41,7 +41,7 @@ class LogbookController extends Controller
         }
 
         $request->validate([
-            'tanggal'         => 'required|date',
+            
             'kegiatan'        => 'required|string',
             'output_kegiatan' => 'required|string|max:2000',
             'kendala'         => 'nullable|string|max:2000',
@@ -51,11 +51,16 @@ class LogbookController extends Controller
             'bukti_foto'      => 'required|image|max:5120',
         ]);
 
+        $existingToday = Logbook::where('pengajuan_id', $pengajuan->id)->whereDate('tanggal', now()->toDateString())->first();
+        if ($existingToday && !in_array($existingToday->status_validasi, ['revisi'], true)) {
+            return redirect()->back()->withInput()->with('error', 'Logbook untuk hari ini sudah ada. Satu tanggal hanya boleh memiliki satu logbook.');
+        }
+
         $fotoPath = $request->file('bukti_foto')->store('images/logbook', 'public');
 
         $logbook = Logbook::create([
             'pengajuan_id'     => $pengajuanId,
-            'tanggal'          => $request->tanggal,
+            'tanggal'          => now()->toDateString(),
             'kegiatan'         => $request->kegiatan,
             'output_kegiatan'  => $request->output_kegiatan,
             'kendala'          => $request->kendala,
@@ -132,7 +137,7 @@ class LogbookController extends Controller
         }
 
         $request->validate([
-            'tanggal'         => 'required|date',
+            
             'kegiatan'        => 'required|string',
             'output_kegiatan' => 'required|string|max:2000',
             'kendala'         => 'nullable|string|max:2000',
@@ -142,7 +147,7 @@ class LogbookController extends Controller
             'bukti_foto'      => 'nullable|image|max:5120',
         ]);
 
-        $data = $request->only(['tanggal', 'kegiatan', 'output_kegiatan', 'kendala', 'solusi', 'jam_mulai', 'jam_selesai']);
+        $data = $request->only(['kegiatan', 'output_kegiatan', 'kendala', 'solusi', 'jam_mulai', 'jam_selesai']);
         $data['status_validasi'] = 'pending';
         $data['status_dosen'] = 'pending';
         $data['status_mitra'] = 'pending';
