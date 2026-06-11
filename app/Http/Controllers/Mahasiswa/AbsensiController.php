@@ -15,6 +15,10 @@ class AbsensiController extends Controller
 {
     public function index(Request $request)
     {
+        if (!config('mbkm.absensi_aktif')) {
+            return view('mahasiswa.info-butuh-pengajuan', ['feature' => 'Absensi Magang', 'message' => 'Fitur Absensi Magang sedang dinonaktifkan untuk periode ini.']);
+        }
+
         $pengajuan = $this->activePengajuan();
         if (!$pengajuan) {
             return view('mahasiswa.info-butuh-pengajuan', [
@@ -37,6 +41,10 @@ class AbsensiController extends Controller
 
     public function store(Request $request)
     {
+        if (!config('mbkm.absensi_aktif')) {
+            return redirect()->route('mahasiswa.absensi.index')->with('error', 'Fitur Absensi Magang sedang dinonaktifkan untuk periode ini.');
+        }
+
         $pengajuan = $this->activePengajuan();
         if (!$pengajuan) {
             return redirect()->route('mahasiswa.absensi.index')->with('error', 'Absensi belum dapat diisi karena SK Magang belum berjalan atau mitra belum terhubung.');

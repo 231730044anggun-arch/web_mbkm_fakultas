@@ -39,28 +39,16 @@ class PenilaianController extends Controller
                 ->with('error', 'Penilaian belum dapat dilakukan karena mahasiswa belum mengajukan Seminar Magang.');
         }
 
-        $request->validate([
-            'nilai_absensi' => 'required|numeric|min:0|max:100',
-            'nilai_sikap_etika' => 'required|numeric|min:0|max:100',
-            'nilai_teamwork' => 'required|numeric|min:0|max:100',
-            'nilai_disiplin_tanggung_jawab' => 'required|numeric|min:0|max:100',
-            'catatan_mitra' => 'nullable|string|max:1000',
-        ]);
-
-        $nilaiLapangan =
-            ($request->nilai_absensi * 0.10) +
-            ($request->nilai_sikap_etika * 0.15) +
-            ($request->nilai_teamwork * 0.15) +
-            ($request->nilai_disiplin_tanggung_jawab * 0.20);
+        $request->validate($this->rules());
 
         $penilaian = Penilaian::updateOrCreate(
             ['pengajuan_id' => $pengajuanId],
             [
-                'nilai_lapangan' => round($nilaiLapangan, 2),
-                'nilai_absensi' => $request->nilai_absensi,
-                'nilai_sikap_etika' => $request->nilai_sikap_etika,
-                'nilai_teamwork' => $request->nilai_teamwork,
-                'nilai_disiplin_tanggung_jawab' => $request->nilai_disiplin_tanggung_jawab,
+                'pembimbing_kehadiran_disiplin' => $request->pembimbing_kehadiran_disiplin,
+                'pembimbing_kinerja_sikap' => $request->pembimbing_kinerja_sikap,
+                'pembimbing_logbook_kegiatan' => $request->pembimbing_logbook_kegiatan,
+                'pembimbing_luaran' => $request->pembimbing_luaran,
+                'pembimbing_laporan_akhir' => $request->pembimbing_laporan_akhir,
                 'catatan_mitra' => $request->catatan_mitra,
                 'catatan' => $request->catatan_mitra,
             ]
@@ -75,14 +63,26 @@ class PenilaianController extends Controller
         if ($pengajuan->mahasiswa?->user) {
             Notifikasi::create([
                 'user_id' => $pengajuan->mahasiswa->user->id,
-                'judul' => 'Nilai Lapangan Tersimpan',
-                'pesan' => 'Nilai lapangan Anda telah diperbarui oleh Pembimbing Lapangan. Nilai akhir akan tampil setelah semua komponen lengkap.',
+                'judul' => 'Nilai Pembimbing Lapangan Tersimpan',
+                'pesan' => 'Nilai dari pembimbing lapangan telah diperbarui. Nilai akhir tampil setelah nilai dosen pembimbing juga lengkap.',
                 'status' => 'belum',
                 'target_url' => route('mahasiswa.penilaian.show', $pengajuan->id),
             ]);
         }
 
-        return redirect()->route('pembimbing.penilaian.index')->with('success', 'Nilai lapangan berhasil disimpan.');
+        return redirect()->route('pembimbing.penilaian.index')->with('success', 'Nilai pembimbing lapangan berhasil disimpan.');
+    }
+
+    private function rules(): array
+    {
+        return [
+            'pembimbing_kehadiran_disiplin' => 'required|numeric|min:0|max:100',
+            'pembimbing_kinerja_sikap' => 'required|numeric|min:0|max:100',
+            'pembimbing_logbook_kegiatan' => 'required|numeric|min:0|max:100',
+            'pembimbing_luaran' => 'required|numeric|min:0|max:100',
+            'pembimbing_laporan_akhir' => 'required|numeric|min:0|max:100',
+            'catatan_mitra' => 'nullable|string|max:1000',
+        ];
     }
 
     private function baseQuery()

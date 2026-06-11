@@ -2,10 +2,10 @@
 namespace App\Http\Controllers\Dosen;
 
 use App\Http\Controllers\Controller;
+use App\Models\Bimbingan;
+use App\Models\Notifikasi;
 use App\Models\Penilaian;
 use App\Models\PengajuanMagang;
-use App\Models\Notifikasi;
-use App\Models\Bimbingan;
 use Illuminate\Http\Request;
 
 class PenilaianController extends Controller
@@ -43,21 +43,16 @@ class PenilaianController extends Controller
                 ->with('error', 'Penilaian belum dapat dilakukan karena mahasiswa belum mengajukan Seminar Magang.');
         }
 
-        $request->validate([
-            'nilai_logbook' => 'required|numeric|min:0|max:100',
-            'nilai_presentasi' => 'required|numeric|min:0|max:100',
-            'catatan_dosen' => 'nullable|string|max:1000',
-        ]);
-
-        $nilaiAkademik = ($request->nilai_logbook * 0.10) + ($request->nilai_presentasi * 0.30);
+        $request->validate($this->rules());
 
         $penilaian = Penilaian::updateOrCreate(
             ['pengajuan_id' => $pengajuanId],
             [
-                'nilai_logbook' => $request->nilai_logbook,
-                'nilai_presentasi' => $request->nilai_presentasi,
-                'nilai_seminar' => $request->nilai_presentasi,
-                'nilai_dosen' => round($nilaiAkademik, 2),
+                'dosen_kehadiran_disiplin' => $request->dosen_kehadiran_disiplin,
+                'dosen_kinerja_sikap' => $request->dosen_kinerja_sikap,
+                'dosen_logbook_kegiatan' => $request->dosen_logbook_kegiatan,
+                'dosen_luaran' => $request->dosen_luaran,
+                'dosen_laporan_akhir' => $request->dosen_laporan_akhir,
                 'catatan_dosen' => $request->catatan_dosen,
                 'catatan' => $request->catatan_dosen,
             ]
@@ -72,14 +67,26 @@ class PenilaianController extends Controller
         if ($pengajuan->mahasiswa?->user) {
             Notifikasi::create([
                 'user_id' => $pengajuan->mahasiswa->user->id,
-                'judul' => 'Nilai Akademik Tersimpan',
-                'pesan' => 'Nilai akademik Anda telah diperbarui oleh dosen pembimbing. Nilai akhir akan tampil setelah semua komponen lengkap.',
+                'judul' => 'Nilai Dosen Pembimbing Tersimpan',
+                'pesan' => 'Nilai dari dosen pembimbing telah diperbarui. Nilai akhir tampil setelah nilai pembimbing lapangan juga lengkap.',
                 'status' => 'belum',
                 'target_url' => route('mahasiswa.penilaian.show', $pengajuan->id),
             ]);
         }
 
-        return redirect()->route('dosen.penilaian.index')->with('success', 'Nilai akademik berhasil disimpan.');
+        return redirect()->route('dosen.penilaian.index')->with('success', 'Nilai dosen pembimbing berhasil disimpan.');
+    }
+
+    private function rules(): array
+    {
+        return [
+            'dosen_kehadiran_disiplin' => 'required|numeric|min:0|max:100',
+            'dosen_kinerja_sikap' => 'required|numeric|min:0|max:100',
+            'dosen_logbook_kegiatan' => 'required|numeric|min:0|max:100',
+            'dosen_luaran' => 'required|numeric|min:0|max:100',
+            'dosen_laporan_akhir' => 'required|numeric|min:0|max:100',
+            'catatan_dosen' => 'nullable|string|max:1000',
+        ];
     }
 
     private function findPengajuanForDosen($pengajuanId): PengajuanMagang

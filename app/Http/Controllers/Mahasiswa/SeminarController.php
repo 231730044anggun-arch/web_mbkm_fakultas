@@ -178,9 +178,11 @@ class SeminarController extends Controller
         $missingWeeks = $this->findMissingWeeks($pengajuan);
         if (count($missingWeeks)) $reasons[] = 'Logbook belum diisi pada minggu: ' . implode(', ', $missingWeeks) . '.';
         if ($pengajuan->logbooks->filter(fn($l) => ($l->status_dosen ?? 'pending') !== 'disetujui' || ($l->status_mitra ?? 'pending') !== 'disetujui')->count()) $reasons[] = 'Masih ada logbook yang belum disetujui dosen dan pembimbing lapangan.';
-        $missingAbsensi = $this->findMissingAbsensiDates($pengajuan);
-        if (count($missingAbsensi)) $reasons[] = 'Absensi magang belum lengkap atau belum disetujui pada tanggal: ' . implode(', ', $missingAbsensi) . '.';
-        if ($pengajuan->absensis->whereIn('status', ['pending', 'revisi', 'ditolak'])->count()) $reasons[] = 'Masih ada absensi magang pending/revisi/ditolak.';
+        if (config('mbkm.absensi_aktif')) {
+            $missingAbsensi = $this->findMissingAbsensiDates($pengajuan);
+            if (count($missingAbsensi)) $reasons[] = 'Absensi magang belum lengkap atau belum disetujui pada tanggal: ' . implode(', ', $missingAbsensi) . '.';
+            if ($pengajuan->absensis->whereIn('status', ['pending', 'revisi', 'ditolak'])->count()) $reasons[] = 'Masih ada absensi magang pending/revisi/ditolak.';
+        }
         if (in_array($pengajuan->status_seminar, ['menunggu_jadwal', 'terjadwal'], true)) $reasons[] = 'Masih ada pengajuan seminar aktif.';
         return ['allowed' => count($reasons) === 0, 'reasons' => $reasons, 'missing' => $missingWeeks];
     }

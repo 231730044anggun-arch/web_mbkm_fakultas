@@ -31,7 +31,7 @@
     <form action="{{ route('mahasiswa.logbook.store', $pengajuan->id) }}" method="POST" enctype="multipart/form-data">
         @csrf
         <div class="row g-3">
-            <div class="col-md-4"><label class="form-label">Tanggal Kegiatan</label><input type="text" class="form-control" value="{{ now()->toDateString() }}" disabled><small class="text-muted">Tanggal logbook otomatis mengikuti tanggal hari ini dan tidak dapat diubah.</small></div><div class="col-md-4"><label class="form-label">Jam Mulai</label>
+            <div class="col-md-4"><label class="form-label">Tanggal Kegiatan</label><input type="date" name="tanggal" class="form-control @error('tanggal') is-invalid @enderror" value="{{ old('tanggal') }}" min="{{ $pengajuan->tanggal_mulai }}" max="{{ $pengajuan->tanggal_selesai }}" required><small class="text-muted">Pilih tanggal sesuai rentang magang: {{ $pengajuan->tanggal_mulai }} s/d {{ $pengajuan->tanggal_selesai }}.</small>@error('tanggal')<div class="invalid-feedback">{{ $message }}</div>@enderror</div><div class="col-md-4"><label class="form-label">Jam Mulai</label>
                 <input type="time" name="jam_mulai" class="form-control @error('jam_mulai') is-invalid @enderror" value="{{ old('jam_mulai') }}" required>
                 @error('jam_mulai')<div class="invalid-feedback">{{ $message }}</div>@enderror
             </div>

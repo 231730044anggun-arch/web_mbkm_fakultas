@@ -1,21 +1,21 @@
-﻿@extends('layouts.app')
+@extends('layouts.app')
 @section('title', 'Nilai Magang')
 @section('page-title', 'Nilai Magang')
 
 @section('content')
 @php
-    $nilaiLapanganReady = $penilaian?->hasNilaiLapangan() ?? false;
-    $nilaiAkademikReady = $penilaian?->hasNilaiAkademik() ?? false;
+    $nilaiDosenReady = $penilaian?->hasNilaiDosenBaru() ?? false;
+    $nilaiPembimbingReady = $penilaian?->hasNilaiPembimbingBaru() ?? false;
     $nilaiLengkap = $seminarValid && $penilaian?->isComplete() && $penilaian->nilai_akhir !== null;
 
     if (!$seminarValid) {
         $finalMessage = 'Nilai belum tersedia karena Seminar Magang belum diajukan.';
-    } elseif (!$nilaiLapanganReady && !$nilaiAkademikReady) {
-        $finalMessage = 'Nilai Akhir belum tersedia karena Nilai Lapangan dan Nilai Akademik belum lengkap.';
-    } elseif (!$nilaiLapanganReady) {
-        $finalMessage = 'Nilai Akhir belum tersedia karena Nilai Lapangan belum diinput.';
-    } elseif (!$nilaiAkademikReady) {
-        $finalMessage = 'Nilai Akhir belum tersedia karena Nilai Akademik belum diinput.';
+    } elseif (!$nilaiDosenReady && !$nilaiPembimbingReady) {
+        $finalMessage = 'Nilai akhir belum tersedia karena nilai dosen pembimbing dan pembimbing lapangan belum lengkap.';
+    } elseif (!$nilaiDosenReady) {
+        $finalMessage = 'Nilai akhir belum tersedia karena nilai dosen pembimbing belum diinput.';
+    } elseif (!$nilaiPembimbingReady) {
+        $finalMessage = 'Nilai akhir belum tersedia karena nilai pembimbing lapangan belum diinput.';
     } else {
         $finalMessage = 'Nilai lengkap.';
     }
@@ -26,41 +26,22 @@
 @endif
 
 <div class="row g-4">
-    <div class="col-md-6">
+    <div class="col-lg-6">
         <div class="card p-4 h-100">
             <div class="d-flex justify-content-between align-items-start mb-3">
-                <h6 class="fw-bold mb-0">Nilai Lapangan</h6>
-                <span class="badge bg-{{ $nilaiLapanganReady ? 'success' : 'secondary' }}">{{ $nilaiLapanganReady ? 'Tersedia' : 'Belum tersedia' }}</span>
+                <h6 class="fw-bold mb-0">Nilai Dosen Pembimbing</h6>
+                <span class="badge bg-{{ $nilaiDosenReady ? 'success' : 'secondary' }}">{{ $nilaiDosenReady ? 'Tersedia' : 'Belum tersedia' }}</span>
             </div>
             <div class="table-responsive">
                 <table class="table table-sm align-middle">
-                    <thead class="table-light"><tr><th>Komponen</th><th>Bobot</th><th>Nilai</th><th>Kontribusi</th></tr></thead>
+                    <thead class="table-light"><tr><th>Komponen</th><th>Bobot</th><th>Nilai</th></tr></thead>
                     <tbody>
-                        <tr><td>Absensi / Kehadiran</td><td>10%</td><td>{{ $penilaian?->nilai_absensi !== null ? number_format($penilaian->nilai_absensi, 2) : 'Belum ada' }}</td><td>{{ $penilaian?->nilai_absensi !== null ? number_format($penilaian->nilai_absensi * 0.10, 2) : '-' }}</td></tr>
-                        <tr><td>Sikap dan Etika Kerja</td><td>15%</td><td>{{ $penilaian?->nilai_sikap_etika !== null ? number_format($penilaian->nilai_sikap_etika, 2) : 'Belum ada' }}</td><td>{{ $penilaian?->nilai_sikap_etika !== null ? number_format($penilaian->nilai_sikap_etika * 0.15, 2) : '-' }}</td></tr>
-                        <tr><td>Teamwork / Kerja Sama Tim</td><td>15%</td><td>{{ $penilaian?->nilai_teamwork !== null ? number_format($penilaian->nilai_teamwork, 2) : 'Belum ada' }}</td><td>{{ $penilaian?->nilai_teamwork !== null ? number_format($penilaian->nilai_teamwork * 0.15, 2) : '-' }}</td></tr>
-                        <tr><td>Kedisiplinan dan Tanggung Jawab</td><td>20%</td><td>{{ $penilaian?->nilai_disiplin_tanggung_jawab !== null ? number_format($penilaian->nilai_disiplin_tanggung_jawab, 2) : 'Belum ada' }}</td><td>{{ $penilaian?->nilai_disiplin_tanggung_jawab !== null ? number_format($penilaian->nilai_disiplin_tanggung_jawab * 0.20, 2) : '-' }}</td></tr>
-                        <tr class="table-light"><th colspan="3">Total Nilai Lapangan</th><th>{{ $penilaian?->nilai_lapangan !== null ? number_format($penilaian->nilai_lapangan, 2) : 'Belum tersedia' }}</th></tr>
-                    </tbody>
-                </table>
-            </div>
-            <div class="small text-muted"><strong>Catatan mitra:</strong> {{ $penilaian?->catatan_mitra ?: 'Tidak ada' }}</div>
-        </div>
-    </div>
-
-    <div class="col-md-6">
-        <div class="card p-4 h-100">
-            <div class="d-flex justify-content-between align-items-start mb-3">
-                <h6 class="fw-bold mb-0">Nilai Akademik</h6>
-                <span class="badge bg-{{ $nilaiAkademikReady ? 'success' : 'secondary' }}">{{ $nilaiAkademikReady ? 'Tersedia' : 'Belum tersedia' }}</span>
-            </div>
-            <div class="table-responsive">
-                <table class="table table-sm align-middle">
-                    <thead class="table-light"><tr><th>Komponen</th><th>Bobot</th><th>Nilai</th><th>Kontribusi</th></tr></thead>
-                    <tbody>
-                        <tr><td>Logbook / Aktivitas Magang</td><td>10%</td><td>{{ $penilaian?->nilai_logbook !== null ? number_format($penilaian->nilai_logbook, 2) : 'Belum ada' }}</td><td>{{ $penilaian?->nilai_logbook !== null ? number_format($penilaian->nilai_logbook * 0.10, 2) : '-' }}</td></tr>
-                        <tr><td>Seminar / Presentasi Akhir</td><td>30%</td><td>{{ $penilaian?->nilai_presentasi !== null ? number_format($penilaian->nilai_presentasi, 2) : 'Belum ada' }}</td><td>{{ $penilaian?->nilai_presentasi !== null ? number_format($penilaian->nilai_presentasi * 0.30, 2) : '-' }}</td></tr>
-                        <tr class="table-light"><th colspan="3">Total Nilai Akademik</th><th>{{ $penilaian?->nilai_dosen !== null ? number_format($penilaian->nilai_dosen, 2) : 'Belum tersedia' }}</th></tr>
+                        <tr><td>Kehadiran dan Disiplin</td><td>15%</td><td>{{ $penilaian?->dosen_kehadiran_disiplin !== null ? number_format($penilaian->dosen_kehadiran_disiplin, 2) : 'Belum ada' }}</td></tr>
+                        <tr><td>Kinerja dan Sikap Kerja</td><td>30%</td><td>{{ $penilaian?->dosen_kinerja_sikap !== null ? number_format($penilaian->dosen_kinerja_sikap, 2) : 'Belum ada' }}</td></tr>
+                        <tr><td>Logbook/Kegiatan Harian Magang</td><td>15%</td><td>{{ $penilaian?->dosen_logbook_kegiatan !== null ? number_format($penilaian->dosen_logbook_kegiatan, 2) : 'Belum ada' }}</td></tr>
+                        <tr><td>Luaran/Hasil Pekerjaan Magang</td><td>20%</td><td>{{ $penilaian?->dosen_luaran !== null ? number_format($penilaian->dosen_luaran, 2) : 'Belum ada' }}</td></tr>
+                        <tr><td>Laporan Akhir Magang</td><td>20%</td><td>{{ $penilaian?->dosen_laporan_akhir !== null ? number_format($penilaian->dosen_laporan_akhir, 2) : 'Belum ada' }}</td></tr>
+                        <tr class="table-light"><th colspan="2">Total Nilai Dosen Pembimbing</th><th>{{ $penilaian?->nilai_dosen_total !== null ? number_format($penilaian->nilai_dosen_total, 2) : 'Belum tersedia' }}</th></tr>
                     </tbody>
                 </table>
             </div>
@@ -68,9 +49,33 @@
         </div>
     </div>
 
+    <div class="col-lg-6">
+        <div class="card p-4 h-100">
+            <div class="d-flex justify-content-between align-items-start mb-3">
+                <h6 class="fw-bold mb-0">Nilai Pembimbing Lapangan</h6>
+                <span class="badge bg-{{ $nilaiPembimbingReady ? 'success' : 'secondary' }}">{{ $nilaiPembimbingReady ? 'Tersedia' : 'Belum tersedia' }}</span>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-sm align-middle">
+                    <thead class="table-light"><tr><th>Komponen</th><th>Bobot</th><th>Nilai</th></tr></thead>
+                    <tbody>
+                        <tr><td>Kehadiran dan Disiplin</td><td>15%</td><td>{{ $penilaian?->pembimbing_kehadiran_disiplin !== null ? number_format($penilaian->pembimbing_kehadiran_disiplin, 2) : 'Belum ada' }}</td></tr>
+                        <tr><td>Kinerja dan Sikap Kerja</td><td>30%</td><td>{{ $penilaian?->pembimbing_kinerja_sikap !== null ? number_format($penilaian->pembimbing_kinerja_sikap, 2) : 'Belum ada' }}</td></tr>
+                        <tr><td>Logbook/Kegiatan Harian Magang</td><td>15%</td><td>{{ $penilaian?->pembimbing_logbook_kegiatan !== null ? number_format($penilaian->pembimbing_logbook_kegiatan, 2) : 'Belum ada' }}</td></tr>
+                        <tr><td>Luaran/Hasil Pekerjaan Magang</td><td>20%</td><td>{{ $penilaian?->pembimbing_luaran !== null ? number_format($penilaian->pembimbing_luaran, 2) : 'Belum ada' }}</td></tr>
+                        <tr><td>Laporan Akhir Magang</td><td>20%</td><td>{{ $penilaian?->pembimbing_laporan_akhir !== null ? number_format($penilaian->pembimbing_laporan_akhir, 2) : 'Belum ada' }}</td></tr>
+                        <tr class="table-light"><th colspan="2">Total Nilai Pembimbing Lapangan</th><th>{{ $penilaian?->nilai_pembimbing_total !== null ? number_format($penilaian->nilai_pembimbing_total, 2) : 'Belum tersedia' }}</th></tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="small text-muted"><strong>Catatan pembimbing:</strong> {{ $penilaian?->catatan_mitra ?: 'Tidak ada' }}</div>
+        </div>
+    </div>
+
     <div class="col-12">
         <div class="card p-4 text-center">
             <h6 class="text-muted mb-2">Nilai Akhir</h6>
+            <div class="small text-muted mb-3">Rumus: 50% nilai dosen pembimbing + 50% nilai pembimbing lapangan.</div>
             @if($nilaiLengkap)
                 <div class="display-4 fw-bold text-success">{{ number_format($penilaian->nilai_akhir, 2) }}</div>
                 <div class="mt-2"><span class="badge bg-success fs-6">Nilai lengkap / Grade {{ $penilaian->grade }}</span></div>

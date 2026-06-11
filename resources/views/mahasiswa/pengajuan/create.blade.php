@@ -27,8 +27,13 @@
     <div class="col-md-4">
         <div class="card p-4 h-100">
             <h6 class="fw-bold mb-2">SK Magang</h6>
-            <p class="text-muted small">Untuk mengupload bukti diterima instansi, proposal, dan meminta dokumen SK Magang.</p>
-            <a href="{{ route('mahasiswa.pengajuan.create', ['jenis' => 'surat_keterangan']) }}" class="btn btn-primary mt-auto">Pilih</a>
+            @if(config('mbkm.mode_angkatan_berjalan'))
+                <p class="text-muted small">Pengajuan SK Magang sedang dinonaktifkan karena SK Magang diterbitkan secara kolektif oleh admin.</p>
+                <button type="button" class="btn btn-secondary mt-auto" disabled>Dinonaktifkan</button>
+            @else
+                <p class="text-muted small">Untuk mengupload bukti diterima instansi, proposal, dan meminta dokumen SK Magang.</p>
+                <a href="{{ route('mahasiswa.pengajuan.create', ['jenis' => 'surat_keterangan']) }}" class="btn btn-primary mt-auto">Pilih</a>
+            @endif
         </div>
     </div>
     <div class="col-md-4">
@@ -38,6 +43,11 @@
             <a href="{{ route('mahasiswa.seminar.index') }}" class="btn btn-primary mt-auto">Buka Seminar</a>
         </div>
     </div>
+</div>
+@elseif($jenisPengajuan === 'surat_keterangan' && config('mbkm.mode_angkatan_berjalan'))
+<div class="card p-4">
+    <div class="alert alert-info mb-0">Pengajuan SK Magang sedang dinonaktifkan karena SK Magang diterbitkan secara kolektif oleh admin.</div>
+    <a href="{{ route('mahasiswa.pengajuan.index') }}" class="btn btn-secondary mt-3">Kembali ke Pengajuan</a>
 </div>
 @elseif($jenisPengajuan === 'surat_keterangan')
 <div class="card p-4">

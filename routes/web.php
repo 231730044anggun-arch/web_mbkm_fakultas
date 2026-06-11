@@ -15,6 +15,7 @@ use App\Http\Controllers\Admin\LaporanController;
 use App\Http\Controllers\Admin\PedomanController;
 use App\Http\Controllers\Admin\PeriodeController;
 use App\Http\Controllers\Admin\SeminarController as AdminSeminar;
+use App\Http\Controllers\Admin\SkKolektifController;
 use App\Http\Controllers\Mahasiswa\DashboardController as MahasiswaDashboard;
 use App\Http\Controllers\Mahasiswa\PengajuanController as MahasiswaPengajuan;
 use App\Http\Controllers\Mahasiswa\BimbinganController as MahasiswaBimbingan;
@@ -24,11 +25,13 @@ use App\Http\Controllers\Mahasiswa\PenilaianController as MahasiswaPenilaian;
 use App\Http\Controllers\Mahasiswa\SeminarController as MahasiswaSeminar;
 use App\Http\Controllers\Mahasiswa\AbsensiController as MahasiswaAbsensi;
 use App\Http\Controllers\Mahasiswa\MitraController as MahasiswaMitra;
+use App\Http\Controllers\Mahasiswa\LaporanKukertaController as MahasiswaLaporanKukerta;
 use App\Http\Controllers\Dosen\DashboardController as DosenDashboard;
 use App\Http\Controllers\Dosen\BimbinganController as DosenBimbingan;
 use App\Http\Controllers\Dosen\LogbookController as DosenLogbook;
 use App\Http\Controllers\Dosen\PenilaianController as DosenPenilaian;
 use App\Http\Controllers\Dosen\SeminarController as DosenSeminar;
+use App\Http\Controllers\Dosen\LaporanKukertaController as DosenLaporanKukerta;
 use App\Http\Controllers\Mitra\DashboardController as MitraDashboard;
 use App\Http\Controllers\Mitra\PengajuanController as MitraPengajuan;
 use App\Http\Controllers\Mitra\PenilaianController as MitraPenilaian;
@@ -98,6 +101,9 @@ Route::prefix('admin')->middleware(['auth', 'role:admin,superadmin'])->name('adm
     Route::get('/pengajuan/{id}/surat/keterangan', [\App\Http\Controllers\Admin\SuratController::class, 'generateSkIndividual'])->name('pengajuan.surat.keterangan');
     Route::get('/pengajuan/{id}/surat/seminar', [\App\Http\Controllers\Admin\SuratController::class, 'generateSkSeminar'])->name('pengajuan.surat.seminar');
     Route::post('/surat/sk-kolektif', [\App\Http\Controllers\Admin\SuratController::class, 'generateSkKolektif'])->name('surat.sk.kolektif');
+    Route::get('/sk-kolektif', [SkKolektifController::class, 'index'])->name('sk-kolektif.index');
+    Route::post('/sk-kolektif', [SkKolektifController::class, 'store'])->name('sk-kolektif.store');
+    Route::post('/sk-kolektif/import-penugasan', [SkKolektifController::class, 'importPenugasan'])->name('sk-kolektif.import-penugasan');
     Route::resource('mitra', MitraController::class);
     Route::post('/periode/{periode}/activate', [PeriodeController::class, 'activate'])->name('periode.activate');
     Route::resource('periode', PeriodeController::class)->except(['show']);
@@ -165,6 +171,9 @@ Route::prefix('mahasiswa')->middleware(['auth', 'role:mahasiswa'])->name('mahasi
     Route::get('/surat', [MahasiswaPengajuan::class, 'needsActivePengajuan'])->defaults('feature', 'Surat/Download Surat')->name('surat.info');
     Route::get('/penilaian', [MahasiswaPengajuan::class, 'needsActivePengajuan'])->defaults('feature', 'Penilaian')->name('penilaian.info');
     Route::get('/penilaian/{pengajuanId}', [MahasiswaPenilaian::class, 'show'])->name('penilaian.show');
+    Route::get('/laporan-kukerta', [MahasiswaLaporanKukerta::class, 'index'])->name('laporan-kukerta.index');
+    Route::post('/laporan-kukerta', [MahasiswaLaporanKukerta::class, 'store'])->name('laporan-kukerta.store');
+    Route::get('/laporan-kukerta/{laporan}/{type}/{index?}', [MahasiswaLaporanKukerta::class, 'file'])->name('laporan-kukerta.file');
 });
 
 // ============ DOSEN ============
@@ -190,6 +199,9 @@ Route::prefix('dosen')->middleware(['auth', 'role:dosen'])->name('dosen.')->grou
     Route::get('/penilaian', [DosenPenilaian::class, 'index'])->name('penilaian.index');
     Route::get('/penilaian/{pengajuanId}', [DosenPenilaian::class, 'create'])->name('penilaian.create');
     Route::post('/penilaian/{pengajuanId}', [DosenPenilaian::class, 'store'])->name('penilaian.store');
+    Route::get('/laporan-kukerta', [DosenLaporanKukerta::class, 'index'])->name('laporan-kukerta.index');
+    Route::get('/laporan-kukerta/{laporan}', [DosenLaporanKukerta::class, 'show'])->name('laporan-kukerta.show');
+    Route::get('/laporan-kukerta/{laporan}/{type}/{index?}', [DosenLaporanKukerta::class, 'file'])->name('laporan-kukerta.file');
 });
 
 // ============ MITRA ============

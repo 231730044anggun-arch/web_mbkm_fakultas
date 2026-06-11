@@ -15,6 +15,10 @@ class AbsensiController extends Controller
 {
     public function index(Request $request)
     {
+        if (!config('mbkm.absensi_aktif')) {
+            return view('mahasiswa.info-butuh-pengajuan', ['feature' => 'Absensi Mahasiswa', 'message' => 'Fitur Absensi Magang sedang dinonaktifkan untuk periode ini.']);
+        }
+
         $pembimbing = auth()->user()->pembimbingLapangan;
         abort_unless($pembimbing, 403);
 
@@ -44,6 +48,10 @@ class AbsensiController extends Controller
 
     public function validasi(Request $request, AbsensiMagang $absensi)
     {
+        if (!config('mbkm.absensi_aktif')) {
+            return redirect()->route('pembimbing.absensi.index')->with('error', 'Fitur Absensi Magang sedang dinonaktifkan untuk periode ini.');
+        }
+
         $this->authorizeAbsensi($absensi);
 
         $request->validate([

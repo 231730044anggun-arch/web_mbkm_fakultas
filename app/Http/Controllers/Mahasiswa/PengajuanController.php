@@ -164,6 +164,10 @@ class PengajuanController extends Controller
 
     private function storeSuratKeterangan(Request $request)
     {
+        if (config('mbkm.mode_angkatan_berjalan')) {
+            return redirect()->route('mahasiswa.pengajuan.create')->with('error', 'Pengajuan SK Magang sedang dinonaktifkan karena SK Magang diterbitkan secara kolektif oleh admin.');
+        }
+
         $mahasiswa = auth()->user()->mahasiswaProfile;
         $eligibility = $this->checkEligibility($mahasiswa);
         if (!$eligibility['allowed']) {

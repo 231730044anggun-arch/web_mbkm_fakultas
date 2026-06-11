@@ -21,34 +21,93 @@ class Penilaian extends Model
         'catatan',
         'catatan_mitra',
         'catatan_dosen',
+        'dosen_kehadiran_disiplin',
+        'dosen_kinerja_sikap',
+        'dosen_logbook_kegiatan',
+        'dosen_luaran',
+        'dosen_laporan_akhir',
+        'nilai_dosen_total',
+        'pembimbing_kehadiran_disiplin',
+        'pembimbing_kinerja_sikap',
+        'pembimbing_logbook_kegiatan',
+        'pembimbing_luaran',
+        'pembimbing_laporan_akhir',
+        'nilai_pembimbing_total',
     ];
 
     public function pengajuan() { return $this->belongsTo(PengajuanMagang::class); }
     public function details() { return $this->hasMany(PenilaianDetail::class); }
 
+    public function hasNilaiDosenBaru(): bool
+    {
+        return $this->dosen_kehadiran_disiplin !== null
+            && $this->dosen_kinerja_sikap !== null
+            && $this->dosen_logbook_kegiatan !== null
+            && $this->dosen_luaran !== null
+            && $this->dosen_laporan_akhir !== null;
+    }
+
+    public function hasNilaiPembimbingBaru(): bool
+    {
+        return $this->pembimbing_kehadiran_disiplin !== null
+            && $this->pembimbing_kinerja_sikap !== null
+            && $this->pembimbing_logbook_kegiatan !== null
+            && $this->pembimbing_luaran !== null
+            && $this->pembimbing_laporan_akhir !== null;
+    }
+
     public function hasNilaiLapangan(): bool
     {
-        return $this->nilai_absensi !== null
+        return $this->hasNilaiPembimbingBaru() || (
+            $this->nilai_absensi !== null
             && $this->nilai_sikap_etika !== null
             && $this->nilai_teamwork !== null
-            && $this->nilai_disiplin_tanggung_jawab !== null;
+            && $this->nilai_disiplin_tanggung_jawab !== null
+        );
     }
 
     public function hasNilaiAkademik(): bool
     {
-        return $this->nilai_logbook !== null && $this->nilai_presentasi !== null;
+        return $this->hasNilaiDosenBaru() || ($this->nilai_logbook !== null && $this->nilai_presentasi !== null);
     }
 
     public function isComplete(): bool
     {
-        return $this->hasNilaiLapangan() && $this->hasNilaiAkademik();
+        return $this->hasNilaiDosenBaru() && $this->hasNilaiPembimbingBaru();
+    }
+
+    public function calculateNilaiDosenBaru(): ?float
+    {
+        if (!$this->hasNilaiDosenBaru()) return null;
+
+        return round(
+            ($this->dosen_kehadiran_disiplin * 0.15) +
+            ($this->dosen_kinerja_sikap * 0.30) +
+            ($this->dosen_logbook_kegiatan * 0.15) +
+            ($this->dosen_luaran * 0.20) +
+            ($this->dosen_laporan_akhir * 0.20),
+            2
+        );
+    }
+
+    public function calculateNilaiPembimbingBaru(): ?float
+    {
+        if (!$this->hasNilaiPembimbingBaru()) return null;
+
+        return round(
+            ($this->pembimbing_kehadiran_disiplin * 0.15) +
+            ($this->pembimbing_kinerja_sikap * 0.30) +
+            ($this->pembimbing_logbook_kegiatan * 0.15) +
+            ($this->pembimbing_luaran * 0.20) +
+            ($this->pembimbing_laporan_akhir * 0.20),
+            2
+        );
     }
 
     public function calculateNilaiLapangan(): ?float
     {
-        if (!$this->hasNilaiLapangan()) {
-            return null;
-        }
+        if ($this->hasNilaiPembimbingBaru()) return $this->calculateNilaiPembimbingBaru();
+        if (!$this->hasNilaiLapangan()) return null;
 
         return round(
             ($this->nilai_absensi * 0.10) +
@@ -61,18 +120,18 @@ class Penilaian extends Model
 
     public function calculateNilaiAkademik(): ?float
     {
-        if (!$this->hasNilaiAkademik()) {
-            return null;
-        }
+        if ($this->hasNilaiDosenBaru()) return $this->calculateNilaiDosenBaru();
+        if (!$this->hasNilaiAkademik()) return null;
 
         return round(($this->nilai_logbook * 0.10) + ($this->nilai_presentasi * 0.30), 2);
     }
 
     public function calculateFinalScore(): void
     {
-        $this->nilai_lapangan = $this->calculateNilaiLapangan();
-        $this->nilai_dosen = $this->calculateNilaiAkademik();
-        $this->nilai_seminar = $this->nilai_presentasi;
+        $this->nilai_dosen_total = $this->calculateNilaiDosenBaru();
+        $this->nilai_pembimbing_total = $this->calculateNilaiPembimbingBaru();
+        $this->nilai_dosen = $this->nilai_dosen_total;
+        $this->nilai_lapangan = $this->nilai_pembimbing_total;
 
         if (!$this->isComplete()) {
             $this->nilai_akhir = null;
@@ -81,7 +140,7 @@ class Penilaian extends Model
             return;
         }
 
-        $nilaiAkhir = round($this->nilai_lapangan + $this->nilai_dosen, 2);
+        $nilaiAkhir = round(($this->nilai_dosen_total * 0.50) + ($this->nilai_pembimbing_total * 0.50), 2);
 
         $grade = match (true) {
             $nilaiAkhir >= 80 => 'A',

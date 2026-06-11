@@ -59,6 +59,12 @@
         Laporan
     </a>
 
+    <a href="{{ route('admin.sk-kolektif.index') }}"
+       class="nav-link {{ request()->is('admin/sk-kolektif*') ? 'active' : '' }}">
+        <i class="bi bi-file-earmark-check me-2"></i>
+        SK Magang Kolektif
+    </a>
+
     <a href="{{ route('profile.show') }}" 
        class="nav-link {{ request()->is('profile*') ? 'active' : '' }}">
         <i class="bi bi-person me-2"></i>
@@ -109,11 +115,13 @@
             Logbook
         </a>
 
+        @if(config('mbkm.absensi_aktif'))
         <a href="{{ route('mahasiswa.absensi.index') }}"
            class="nav-link {{ request()->is('mahasiswa/absensi*') ? 'active' : '' }}">
             <i class="bi bi-calendar2-check me-2"></i>
             Absensi Magang
         </a>
+        @endif
 
         <a href="{{ route('mahasiswa.bimbingan.index') }}"
            class="nav-link {{ request()->is('mahasiswa/bimbingan*') ? 'active' : '' }}">
@@ -141,11 +149,13 @@
             Logbook
         </a>
 
+        @if(config('mbkm.absensi_aktif'))
         <a href="{{ route('mahasiswa.absensi.index') }}"
            class="nav-link {{ request()->is('mahasiswa/absensi*') ? 'active' : '' }}">
             <i class="bi bi-calendar2-check me-2"></i>
             Absensi Magang
         </a>
+        @endif
 
         <a href="{{ route('mahasiswa.bimbingan.index') }}"
            class="nav-link {{ request()->is('mahasiswa/bimbingan*') ? 'active' : '' }}">
@@ -165,6 +175,12 @@
        class="nav-link {{ request()->is('mahasiswa/seminar*') ? 'active' : '' }}">
         <i class="bi bi-calendar-check me-2"></i>
         Seminar Magang
+    </a>
+
+    <a href="{{ route('mahasiswa.laporan-kukerta.index') }}"
+       class="nav-link {{ request()->is('mahasiswa/laporan-kukerta*') ? 'active' : '' }}">
+        <i class="bi bi-folder2-open me-2"></i>
+        Laporan Kukerta
     </a>
 
     <a href="{{ route('pedoman.index') }}" 
@@ -205,6 +221,12 @@
         Seminar Magang
     </a>
 
+    <a href="{{ route('dosen.laporan-kukerta.index') }}"
+       class="nav-link {{ request()->is('dosen/laporan-kukerta*') ? 'active' : '' }}">
+        <i class="bi bi-folder2-open me-2"></i>
+        Laporan Kukerta
+    </a>
+
     <a href="{{ route('dosen.penilaian.index') }}"
        class="nav-link {{ request()->is('dosen/penilaian*') ? 'active' : '' }}">
         <i class="bi bi-star me-2"></i>
@@ -238,11 +260,13 @@
         Mahasiswa Bimbingan
     </a>
 
+    @if(config('mbkm.absensi_aktif'))
     <a href="{{ route('pembimbing.absensi.index') }}"
        class="nav-link {{ request()->is('pembimbing-lapangan/absensi*') ? 'active' : '' }}">
         <i class="bi bi-calendar2-check me-2"></i>
         Absensi Mahasiswa
     </a>
+    @endif
 
     <a href="{{ route('pembimbing.logbook.index') }}"
        class="nav-link {{ request()->is('pembimbing-lapangan/logbook*') ? 'active' : '' }}">
