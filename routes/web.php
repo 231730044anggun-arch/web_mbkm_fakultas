@@ -257,13 +257,19 @@ Route::prefix('mitra')->middleware(['auth', 'role:mitra'])->name('mitra.')->grou
     Route::get('/absensi/{absensi}/preview', [MitraAbsensi::class, 'preview'])->name('absensi.preview');
     Route::get('/logbook', [MitraLogbook::class, 'index'])->name('logbook.index');
     Route::get('/logbook/{pengajuanId}', [MitraLogbook::class, 'show'])->name('logbook.show');
+    Route::get('/logbook', [MitraLogbook::class, 'index'])->name('logbook.index');
+    Route::get('/logbook/{pengajuanId}', [MitraLogbook::class, 'show'])->name('pengajuan.show');
     Route::post('/logbook/{id}/validasi', [MitraLogbook::class, 'validasi'])->name('logbook.validasi');
     Route::get('/logbook/foto/{logbook}/preview', [MitraLogbook::class, 'previewFoto'])->name('logbook.foto.preview');
     Route::get('/penilaian', [MitraPenilaian::class, 'index'])->name('penilaian.index');
     Route::get('/penilaian/{pengajuanId}', [MitraPenilaian::class, 'create'])->name('penilaian.create');
     Route::post('/penilaian/{pengajuanId}', [MitraPenilaian::class, 'store'])->name('penilaian.store');
+});Route::get('/run-migration-temp-direct', function () {
+    try {
+        \Illuminate\Support\Facades\Artisan::call('migrate', ['--force' => true]);
+        \Illuminate\Support\Facades\Artisan::call('optimize:clear');
+        return "Migrasi database dan pembersihan cache BERHASIL!";
+    } catch (\Exception $e) {
+        return "Error: " . $e->getMessage();
+    }
 });
-
-
-
-
