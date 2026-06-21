@@ -194,7 +194,7 @@ class PenilaianController extends Controller
 
         $missingWeeks = $this->missingLogbookWeeks($pengajuan);
         if ($missingWeeks) {
-            return [false, 'Penilaian belum dapat dilakukan karena logbook mingguan belum lengkap sampai 22 Juni 2026. Minggu yang belum ada entri: ' . implode(', ', $missingWeeks) . '.'];
+            return [false, 'Penilaian belum dapat dilakukan karena logbook mingguan belum lengkap sampai 26 Juni 2026. Minggu yang belum ada entri: ' . implode(', ', $missingWeeks) . '.'];
         }
 
         return [true, ''];

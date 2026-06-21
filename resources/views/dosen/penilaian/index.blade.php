@@ -68,7 +68,7 @@
                                 ? 'Penilaian belum dapat dilakukan karena mahasiswa belum mengirim Laporan Hasil Magang, Uraian Output Magang, Produk Magang, dan Draft Jurnal pada menu Seminar Magang.'
                                 : ($pengajuan->bimbinganFormals->isEmpty()
                                     ? 'Penilaian belum dapat dilakukan karena mahasiswa belum memiliki minimal satu riwayat bimbingan.'
-                                    : 'Penilaian belum dapat dilakukan karena logbook mingguan belum lengkap sampai 22 Juni 2026.')))
+                                    : 'Penilaian belum dapat dilakukan karena logbook mingguan belum lengkap sampai 26 Juni 2026.')))
                         : 'Penilaian belum dapat dilakukan karena mahasiswa belum menyelesaikan Seminar Magang.';
                 @endphp
                 <tr>
