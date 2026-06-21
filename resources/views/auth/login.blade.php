@@ -3,123 +3,142 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login — MBKM Fakultas</title>
+    <title>Login - MBKM Fakultas</title>
+    <link rel="icon" href="{{ asset('assets/img/favicon.ico') }}" type="image/x-icon">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
     <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; }
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
 
         body {
             min-height: 100vh;
-            background: #ede9fe;
-            font-family: 'Segoe UI', sans-serif;
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-        }
-
-        /* ===== LEFT FULL HEIGHT ===== */
-        .left {
-            background: #fff;
+            font-family: Inter, Poppins, Nunito, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            color: #1f1b2e;
+            background:
+                radial-gradient(circle at 18% 12%, rgba(196, 181, 253, 0.34), transparent 30%),
+                radial-gradient(circle at 82% 86%, rgba(233, 213, 255, 0.42), transparent 34%),
+                linear-gradient(135deg, #ffffff 0%, #f7f3ff 52%, #fbfaff 100%);
             display: flex;
-            flex-direction: column;
+            align-items: center;
             justify-content: center;
-            align-items: center;
-            padding: 60px 64px;
-            position: relative;
-            overflow: hidden;
+            padding: 28px 16px;
         }
 
-        .left-deco-1 {
-            position: absolute;
-            width: 300px; height: 300px;
-            background: #f3f0ff;
-            border-radius: 50%;
-            top: -100px; left: -100px;
+        .login-shell {
+            width: 100%;
+            max-width: 460px;
         }
 
-        .left-deco-2 {
-            position: absolute;
-            width: 200px; height: 200px;
-            background: #faf8ff;
-            border-radius: 50%;
-            bottom: 40px; right: -60px;
+        .login-card {
+            width: 100%;
+            background: rgba(255, 255, 255, 0.96);
+            border: 1px solid rgba(221, 214, 254, 0.9);
+            border-radius: 22px;
+            box-shadow: 0 22px 58px rgba(76, 29, 149, 0.12);
+            padding: 38px 40px 30px;
         }
 
-        .left-inner { width: 100%; max-width: 380px; position: relative; z-index: 1; }
-
-        .brand-row {
+        .brand-header {
             display: flex;
             align-items: center;
+            justify-content: center;
             gap: 12px;
-            margin-bottom: 40px;
+            margin-bottom: 24px;
         }
 
-        .brand-icon {
-            width: 42px; height: 42px;
-            background: #ede9fe;
-            border-radius: 12px;
+        .brand-logo-wrap {
+            width: 52px;
+            height: 52px;
+            border-radius: 14px;
+            background: #f3f0ff;
+            border: 1px solid #e9d5ff;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 1.2rem;
+            flex-shrink: 0;
+        }
+
+        .brand-logo {
+            width: 46px;
+            height: 46px;
+            object-fit: contain;
+            display: block;
+        }
+
+        .brand-copy {
+            text-align: left;
+            min-width: 0;
+        }
+
+        .app-name {
+            font-size: 1.04rem;
+            font-weight: 700;
+            color: #3b0764;
+            line-height: 1.25;
+        }
+
+        .app-subname {
+            margin-top: 4px;
+            font-size: 0.84rem;
+            font-weight: 600;
             color: #7c3aed;
         }
 
-        .brand-name {
-            font-size: 1rem;
+        .login-title {
+            font-size: 1.45rem;
             font-weight: 700;
             color: #1e1140;
-            line-height: 1.2;
+            text-align: center;
+            margin-bottom: 30px;
         }
 
-        .brand-name span {
-            display: block;
-            font-size: 0.72rem;
-            font-weight: 400;
-            color: #a78bfa;
+        .error-box {
+            background: #fff1f2;
+            border: 1px solid #fecdd3;
+            border-radius: 12px;
+            padding: 11px 13px;
+            color: #be123c;
+            font-size: 0.86rem;
+            display: flex;
+            align-items: flex-start;
+            gap: 9px;
+            margin-bottom: 18px;
         }
 
-        .left-inner h2 {
-            font-size: 1.7rem;
-            font-weight: 700;
-            color: #1e1140;
-            line-height: 1.3;
-            margin-bottom: 8px;
+        .form-group {
+            margin-bottom: 18px;
         }
-
-        .left-inner > p {
-            font-size: 0.85rem;
-            color: #9ca3af;
-            margin-bottom: 36px;
-        }
-
-        .form-group { margin-bottom: 16px; }
 
         .form-group label {
             display: block;
-            font-size: 0.8rem;
-            font-weight: 600;
+            font-size: 0.86rem;
+            font-weight: 700;
             color: #4c1d95;
-            margin-bottom: 7px;
+            margin-bottom: 8px;
         }
 
         .input-box {
             display: flex;
             align-items: center;
-            border: 1.5px solid #ede9fe;
-            border-radius: 12px;
-            background: #faf8ff;
+            min-height: 54px;
+            border: 1.5px solid #e9d5ff;
+            border-radius: 14px;
+            background: #fbfaff;
             padding: 0 14px;
-            transition: all 0.2s;
+            transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
         }
 
         .input-box:focus-within {
             border-color: #8b5cf6;
             background: #fff;
-            box-shadow: 0 0 0 3px rgba(139,92,246,0.1);
+            box-shadow: 0 0 0 4px rgba(139, 92, 246, 0.12);
         }
 
         .input-box i {
-            color: #c4b5fd;
+            color: #a78bfa;
             font-size: 1rem;
             margin-right: 10px;
             flex-shrink: 0;
@@ -127,284 +146,137 @@
 
         .input-box input {
             flex: 1;
-            border: none;
+            width: 100%;
+            border: 0;
+            outline: 0;
             background: transparent;
-            padding: 12px 0;
-            font-size: 0.875rem;
             color: #1f2937;
-            outline: none;
+            font-size: 0.94rem;
+            padding: 12px 0;
         }
 
-        .input-box input::placeholder { color: #ddd6fe; }
+        .input-box input::placeholder {
+            color: #c4b5fd;
+        }
 
         .btn-login {
             width: 100%;
-            padding: 13px;
-            background: #8b5cf6;
+            min-height: 52px;
+            border: 0;
+            border-radius: 14px;
+            background: #7c3aed;
             color: #fff;
-            border: none;
-            border-radius: 12px;
-            font-size: 0.9rem;
-            font-weight: 600;
+            font-size: 0.95rem;
+            font-weight: 700;
             cursor: pointer;
-            transition: all 0.25s;
             display: flex;
             align-items: center;
             justify-content: center;
             gap: 8px;
-            margin-top: 24px;
+            margin-top: 20px;
+            transition: background 0.2s, box-shadow 0.2s, transform 0.2s;
         }
 
         .btn-login:hover {
-            background: #7c3aed;
-            transform: translateY(-2px);
-            box-shadow: 0 8px 24px rgba(139,92,246,0.3);
+            background: #6d28d9;
+            box-shadow: 0 14px 28px rgba(124, 58, 237, 0.25);
+            transform: translateY(-1px);
         }
 
-        .error-box {
-            background: #fef2f2;
-            border: 1px solid #fecaca;
-            border-radius: 10px;
-            padding: 10px 14px;
-            color: #b91c1c;
-            font-size: 0.82rem;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            margin-bottom: 18px;
-        }
-
-        .left-footer {
-            margin-top: 32px;
+        .login-footer {
+            margin-top: 20px;
             text-align: center;
-            color: #d1d5db;
-            font-size: 0.7rem;
+            color: #9ca3af;
+            font-size: 0.78rem;
         }
 
-        /* ===== RIGHT FULL HEIGHT ===== */
-        .right {
-            background: #ede9fe;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            padding: 60px 48px;
-            position: relative;
-            overflow: hidden;
-        }
+        @media (max-width: 480px) {
+            body {
+                padding: 18px 12px;
+            }
 
-        .right-deco {
-            position: absolute;
-            width: 350px; height: 350px;
-            background: #ddd6fe;
-            border-radius: 50%;
-            bottom: -100px; right: -100px;
-        }
+            .login-card {
+                border-radius: 18px;
+                padding: 30px 22px 24px;
+            }
 
-        .right-inner {
-            position: relative;
-            z-index: 1;
-            width: 100%;
-            max-width: 360px;
-        }
+            .brand-header {
+                gap: 12px;
+            }
 
-        .right-inner h3 {
-            font-size: 1.2rem;
-            font-weight: 700;
-            color: #3b0764;
-            margin-bottom: 6px;
-        }
+            .brand-logo-wrap {
+                width: 50px;
+                height: 50px;
+            }
 
-        .right-inner > p {
-            font-size: 0.82rem;
-            color: #7c3aed;
-            margin-bottom: 28px;
-        }
+            .brand-logo {
+                width: 44px;
+                height: 44px;
+            }
 
-        .feature-card {
-            background: rgba(255,255,255,0.6);
-            border: 1.5px solid rgba(255,255,255,0.8);
-            border-radius: 16px;
-            padding: 16px 18px;
-            display: flex;
-            align-items: center;
-            gap: 14px;
-            margin-bottom: 12px;
-            backdrop-filter: blur(10px);
-            transition: all 0.2s;
-        }
+            .app-name {
+                font-size: 0.9rem;
+            }
 
-        .feature-card:hover {
-            background: rgba(255,255,255,0.85);
-            transform: translateX(4px);
-        }
+            .app-subname {
+                font-size: 0.78rem;
+            }
 
-        .feature-card-icon {
-            width: 44px; height: 44px;
-            background: #ddd6fe;
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.2rem;
-            color: #7c3aed;
-            flex-shrink: 0;
-        }
-
-        .feature-card-text h5 {
-            font-size: 0.85rem;
-            font-weight: 600;
-            color: #3b0764;
-            margin-bottom: 2px;
-        }
-
-        .feature-card-text p {
-            font-size: 0.76rem;
-            color: #7c3aed;
-            line-height: 1.4;
-        }
-
-        .roles-section {
-            margin-top: 24px;
-        }
-
-        .roles-section p {
-            font-size: 0.75rem;
-            font-weight: 700;
-            color: #6d28d9;
-            margin-bottom: 10px;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-
-        .roles-row {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 7px;
-        }
-
-        .role-pill {
-            background: #fff;
-            color: #6d28d9;
-            border: 1.5px solid #ddd6fe;
-            border-radius: 20px;
-            padding: 5px 14px;
-            font-size: 0.73rem;
-            font-weight: 600;
-            display: flex;
-            align-items: center;
-            gap: 5px;
+            .login-title {
+                font-size: 1.34rem;
+                margin-bottom: 28px;
+            }
         }
     </style>
 </head>
 <body>
-
-<!-- LEFT: FORM -->
-<div class="left">
-    <div class="left-deco-1"></div>
-    <div class="left-deco-2"></div>
-
-    <div class="left-inner">
-        <div class="brand-row">
-            <div class="brand-icon"><i class="bi bi-mortarboard-fill"></i></div>
-            <div class="brand-name">
-                MBKM Fakultas
-                <span>Sistem Informasi Magang</span>
-            </div>
-        </div>
-
-        <h2>Masuk ke Akun Anda</h2>
-        <p>Selamat datang kembali! Silakan isi data login Anda.</p>
-
-        @if($errors->any())
-        <div class="error-box">
-            <i class="bi bi-exclamation-circle-fill"></i>
-            {{ $errors->first() }}
-        </div>
-        @endif
-
-        <form action="{{ route('login.post') }}" method="POST">
-            @csrf
-            <div class="form-group">
-                <label>Alamat Email</label>
-                <div class="input-box">
-                    <i class="bi bi-envelope-fill"></i>
-                    <input type="email" name="email" placeholder="nama@email.com"
-                        value="{{ old('email') }}" required autofocus>
+    <main class="login-shell">
+        <section class="login-card" aria-label="Form login MBKM Fakultas">
+            <div class="brand-header">
+                <div class="brand-logo-wrap">
+                    <img src="{{ asset('assets/img/logo-uin-sidebar.png') }}" alt="Logo UIN" class="brand-logo">
+                </div>
+                <div class="brand-copy">
+                    <div class="app-name">MBKM Fakultas Sains dan Teknologi</div>
+                    <div class="app-subname">Sistem Informasi Magang</div>
                 </div>
             </div>
 
-            <div class="form-group">
-                <label>Password</label>
-                <div class="input-box">
-                    <i class="bi bi-lock-fill"></i>
-                    <input type="password" name="password" placeholder="••••••••" required>
+            <h1 class="login-title">Login ke Akun Anda</h1>
+
+            @if($errors->any())
+                <div class="error-box">
+                    <i class="bi bi-exclamation-circle-fill"></i>
+                    <span>{{ $errors->first() }}</span>
                 </div>
-            </div>
+            @endif
 
-            <button type="submit" class="btn-login">
-                <i class="bi bi-box-arrow-in-right"></i>
-                Masuk ke Sistem
-            </button>
-        </form>
+            <form action="{{ route('login.post') }}" method="POST">
+                @csrf
+                <div class="form-group">
+                    <label for="email">Alamat Email</label>
+                    <div class="input-box">
+                        <i class="bi bi-envelope-fill" aria-hidden="true"></i>
+                        <input id="email" type="email" name="email" placeholder="nama@email.com" value="{{ old('email') }}" required autofocus>
+                    </div>
+                </div>
 
-        <div class="left-footer">© 2025 MBKM Fakultas v1.0</div>
-    </div>
-</div>
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <div class="input-box">
+                        <i class="bi bi-lock-fill" aria-hidden="true"></i>
+                        <input id="password" type="password" name="password" placeholder="Masukkan password" required>
+                    </div>
+                </div>
 
-<!-- RIGHT: INFO -->
-<div class="right">
-    <div class="right-deco"></div>
+                <button type="submit" class="btn-login">
+                    <i class="bi bi-box-arrow-in-right" aria-hidden="true"></i>
+                    Masuk
+                </button>
+            </form>
 
-    <div class="right-inner">
-        <h3>Kenapa MBKM Fakultas?</h3>
-        <p>Platform lengkap untuk pengelolaan program magang kampus merdeka</p>
-
-        <div class="feature-card">
-            <div class="feature-card-icon"><i class="bi bi-file-earmark-check-fill"></i></div>
-            <div class="feature-card-text">
-                <h5>Pengajuan Digital</h5>
-                <p>Ajukan magang & dapatkan persetujuan secara online</p>
-            </div>
-        </div>
-
-        <div class="feature-card">
-            <div class="feature-card-icon"><i class="bi bi-journal-richtext"></i></div>
-            <div class="feature-card-text">
-                <h5>Logbook Harian</h5>
-                <p>Catat & monitor kegiatan magang setiap hari</p>
-            </div>
-        </div>
-
-        <div class="feature-card">
-            <div class="feature-card-icon"><i class="bi bi-star-fill"></i></div>
-            <div class="feature-card-text">
-                <h5>Penilaian Terpadu</h5>
-                <p>Nilai dari dosen & mitra terintegrasi otomatis</p>
-            </div>
-        </div>
-
-        <div class="feature-card">
-            <div class="feature-card-icon"><i class="bi bi-bar-chart-fill"></i></div>
-            <div class="feature-card-text">
-                <h5>Laporan & Statistik</h5>
-                <p>Data real-time untuk monitoring & evaluasi</p>
-            </div>
-        </div>
-
-        <div class="roles-section">
-            <p><i class="bi bi-people-fill"></i> Tersedia untuk:</p>
-            <div class="roles-row">
-                <div class="role-pill"><i class="bi bi-shield-fill"></i> Superadmin</div>
-                <div class="role-pill"><i class="bi bi-person-gear"></i> Admin</div>
-                <div class="role-pill"><i class="bi bi-person-badge"></i> Mahasiswa</div>
-                <div class="role-pill"><i class="bi bi-person-workspace"></i> Dosen</div>
-                <div class="role-pill"><i class="bi bi-building"></i> Mitra</div>
-            </div>
-        </div>
-    </div>
-</div>
-
+            <div class="login-footer">&copy; 2026 MBKM Fakultas</div>
+        </section>
+    </main>
 </body>
 </html>

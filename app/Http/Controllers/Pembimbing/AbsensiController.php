@@ -1,6 +1,7 @@
 <?php
 namespace App\Http\Controllers\Pembimbing;
 
+use App\Http\Controllers\Concerns\HandlesSecurePublicFiles;
 use App\Http\Controllers\Controller;
 use App\Models\AbsensiMagang;
 use App\Models\Notifikasi;
@@ -13,17 +14,22 @@ use Symfony\Component\HttpFoundation\ResponseHeaderBag;
 
 class AbsensiController extends Controller
 {
+    use HandlesSecurePublicFiles;
     public function index(Request $request)
     {
-        if (!config('mbkm.absensi_aktif')) {
-            return view('mahasiswa.info-butuh-pengajuan', ['feature' => 'Absensi Mahasiswa', 'message' => 'Fitur Absensi Magang sedang dinonaktifkan untuk periode ini.']);
-        }
-
         $pembimbing = auth()->user()->pembimbingLapangan;
         abort_unless($pembimbing, 403);
 
+        if (!config('mbkm.absensi_aktif', true)) {
+            return view('mahasiswa.info-butuh-pengajuan', [
+                'feature' => 'Absensi Mahasiswa',
+                'message' => 'Fitur Absensi Magang sedang dinonaktifkan untuk periode ini.',
+            ]);
+        }
+
         $query = AbsensiMagang::with(['mahasiswa.prodi', 'pengajuan.periode', 'pengajuan.mitra', 'pembimbingLapangan'])
             ->where('pembimbing_lapangan_id', $pembimbing->id)
+            ->whereHas('mahasiswa', fn($q) => $this->scopeMahasiswaAbsensiAktif($q))
             ->whereHas('pengajuan', fn($q) => $q
                 ->where('jenis_pengajuan', 'surat_keterangan')
                 ->whereIn('status_pengajuan', ['berjalan', 'selesai']));
@@ -38,6 +44,7 @@ class AbsensiController extends Controller
             ->where('pembimbing_lapangan_id', $pembimbing->id)
             ->where('jenis_pengajuan', 'surat_keterangan')
             ->whereIn('status_pengajuan', ['berjalan', 'selesai'])
+            ->whereHas('mahasiswa', fn($q) => $this->scopeMahasiswaAbsensiAktif($q))
             ->orderByDesc('updated_at')
             ->get();
 
@@ -48,8 +55,10 @@ class AbsensiController extends Controller
 
     public function validasi(Request $request, AbsensiMagang $absensi)
     {
-        if (!config('mbkm.absensi_aktif')) {
-            return redirect()->route('pembimbing.absensi.index')->with('error', 'Fitur Absensi Magang sedang dinonaktifkan untuk periode ini.');
+        if (!config('mbkm.absensi_aktif', true) || $absensi->mahasiswa?->isAbsensiNonaktif()) {
+            return redirect()->route('pembimbing.absensi.index')->with('error', $absensi->mahasiswa?->isAbsensiNonaktif()
+                ? 'Fitur Absensi Magang sedang dinonaktifkan untuk angkatan 2023.'
+                : 'Fitur Absensi Magang sedang dinonaktifkan untuk periode ini.');
         }
 
         $this->authorizeAbsensi($absensi);
@@ -85,15 +94,24 @@ class AbsensiController extends Controller
     public function preview(AbsensiMagang $absensi)
     {
         $this->authorizeAbsensi($absensi);
-        abort_if(!$absensi->bukti_hadir || !Storage::disk('public')->exists($absensi->bukti_hadir), 404);
-
-        $extension = pathinfo($absensi->bukti_hadir, PATHINFO_EXTENSION) ?: 'pdf';
-        return $this->inlineFile($absensi->bukti_hadir, 'Bukti Absensi ' . ($absensi->mahasiswa->nama_lengkap ?? 'Mahasiswa') . '.' . $extension);
+        $extension = pathinfo($this->normalizePublicPath($absensi->bukti_hadir) ?: $absensi->bukti_hadir, PATHINFO_EXTENSION) ?: 'pdf'; return $this->publicInlineResponse($absensi->bukti_hadir, 'Bukti Absensi ' . ($absensi->mahasiswa->nama_lengkap ?? 'Mahasiswa') . '.' . $extension);
     }
 
     private function authorizeAbsensi(AbsensiMagang $absensi): void
     {
-        abort_unless($absensi->pembimbing_lapangan_id === auth()->user()->pembimbingLapangan?->id, 403);
+        abort_unless($this->idsMatch($absensi->pembimbing_lapangan_id, auth()->user()->pembimbingLapangan?->id), 403);
+    }
+
+    private function scopeMahasiswaAbsensiAktif($query): void
+    {
+        $angkatanNonaktif = config('mbkm.absensi_nonaktif_angkatan', []);
+
+        $query->where(function ($q) use ($angkatanNonaktif) {
+            $q->where(function ($byText) use ($angkatanNonaktif) {
+                $byText->whereNull('angkatan')
+                    ->orWhereNotIn('angkatan', $angkatanNonaktif);
+            })->whereDoesntHave('angkatanMaster', fn($angkatan) => $angkatan->whereIn('tahun', $angkatanNonaktif));
+        });
     }
 
     private function rekapAbsensi(PengajuanMagang $pengajuan): array

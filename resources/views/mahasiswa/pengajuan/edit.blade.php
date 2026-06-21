@@ -4,7 +4,7 @@
 
 @section('content')
 <div class="card p-4">
-    <h6 class="fw-bold mb-3">Revisi Pengajuan Surat Pengantar/Rekomendasi Magang</h6>
+    <h6 class="student-card-title mb-3">Revisi Pengajuan Surat Pengantar/Rekomendasi Magang</h6>
 
     @if($pengajuan->catatan_admin)
         <div class="alert alert-warning">

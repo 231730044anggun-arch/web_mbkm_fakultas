@@ -1,6 +1,7 @@
 <?php
 namespace App\Http\Controllers\Admin;
 
+use App\Http\Controllers\Concerns\HandlesSecurePublicFiles;
 use App\Http\Controllers\Controller;
 use App\Models\PengajuanMagang;
 use App\Models\Dosen;
@@ -22,6 +23,7 @@ use Symfony\Component\HttpFoundation\ResponseHeaderBag;
 
 class PengajuanController extends Controller
 {
+    use HandlesSecurePublicFiles;
     public function index()
     {
         $pengajuans = PengajuanMagang::with(['mahasiswa', 'periode', 'mitra'])->latest()->paginate(15);
@@ -64,7 +66,7 @@ class PengajuanController extends Controller
                 ->where('jenis_dokumen', $jenisDokumen)
                 ->whereNotNull('file_path')
                 ->get()
-                ->contains(fn($dokumen) => $dokumen->file_path && Storage::disk('public')->exists($dokumen->file_path));
+                ->contains(fn($dokumen) => $dokumen->file_path && $this->publicFileExists($dokumen->file_path));
         };
         $needsSuratPengantarFile = $pengajuan->jenis_pengajuan === 'surat_pengantar'
             && $request->input('status') === 'selesai'
@@ -323,23 +325,19 @@ class PengajuanController extends Controller
 
     public function previewDokumen(Dokumen $dokumen)
     {
-        abort_if(!$dokumen->file_path || !Storage::disk('public')->exists($dokumen->file_path), 404);
-
-        return $this->inlineFile($dokumen->file_path, $this->downloadName($dokumen));
+        return $this->publicInlineResponse($dokumen->file_path, $this->downloadName($dokumen));
     }
 
     public function downloadDokumen(Dokumen $dokumen)
     {
-        abort_if(!$dokumen->file_path || !Storage::disk('public')->exists($dokumen->file_path), 404);
-
-        return Storage::disk('public')->download($dokumen->file_path, $this->downloadName($dokumen));
+        return $this->publicDownloadResponse($dokumen->file_path, $this->downloadName($dokumen));
     }
 
     public function destroyDokumen(Dokumen $dokumen)
     {
         $pengajuan = $dokumen->pengajuan;
         if ($dokumen->file_path) {
-            Storage::disk('public')->delete($dokumen->file_path);
+            $this->deletePublicFileIfExists($dokumen->file_path);
         }
 
         $jenis = $dokumen->jenis_dokumen;
@@ -372,7 +370,7 @@ class PengajuanController extends Controller
             ->first();
 
         if ($existing?->file_path) {
-            Storage::disk('public')->delete($existing->file_path);
+            $this->deletePublicFileIfExists($existing->file_path);
         }
 
         $path = $request->file($field)->store($directory, 'public');

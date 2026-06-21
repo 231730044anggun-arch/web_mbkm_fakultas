@@ -3,8 +3,6 @@
 @section('page-title', 'Absensi Magang')
 
 @section('content')
-@if(session('success'))<div class="alert alert-success">{{ session('success') }}</div>@endif
-@if(session('error'))<div class="alert alert-danger">{{ session('error') }}</div>@endif
 @if($errors->any())
 <div class="alert alert-danger">
     <strong>Absensi belum bisa disimpan.</strong>
@@ -28,10 +26,10 @@
 <div class="card p-4 mb-4">
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
         <div>
-            <h6 class="fw-bold mb-1">Form Absensi Harian</h6>
+            <h6 class="student-card-title mb-1">Form Absensi Harian</h6>
             <div class="text-muted small">Absensi berbeda dari logbook. Absensi adalah bukti kehadiran harian selama magang.</div>
         </div>
-        <span class="badge bg-light text-dark border">{{ $pengajuan->mitra->nama_instansi ?? '-' }}</span>
+        <span class="badge bg-light text-dark border student-badge">{{ $pengajuan->mitra->nama_instansi ?? '-' }}</span>
     </div>
     <form action="{{ route('mahasiswa.absensi.store') }}" method="POST" enctype="multipart/form-data">
         @csrf
@@ -64,7 +62,7 @@
 
 <div class="card p-4">
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
-        <div><h6 class="fw-bold mb-1">Riwayat Absensi</h6><div class="text-muted small">Status absensi divalidasi oleh mitra/instansi.</div></div>
+        <div><h6 class="student-card-title mb-1">Riwayat Absensi</h6><div class="text-muted small">Status absensi divalidasi oleh mitra/instansi.</div></div>
         <form class="row g-2" method="GET" action="{{ route('mahasiswa.absensi.index') }}">
             <div class="col-auto"><input type="date" name="from" value="{{ request('from') }}" class="form-control form-control-sm"></div>
             <div class="col-auto"><input type="date" name="to" value="{{ request('to') }}" class="form-control form-control-sm"></div>
@@ -73,18 +71,18 @@
         </form>
     </div>
     <div class="table-responsive">
-        <table class="table table-hover align-middle">
-            <thead class="table-light"><tr><th>Tanggal</th><th>Jam</th><th>Keterangan</th><th>Bukti</th><th>Status</th><th>Catatan Mitra</th></tr></thead>
+        <table class="table table-hover student-table">
+            <thead class="table-light"><tr><th class="align-top">Tanggal</th><th class="align-top">Jam</th><th class="align-top">Keterangan</th><th class="align-top">Bukti</th><th class="align-top">Status</th><th class="align-top">Catatan Pembimbing Lapangan</th></tr></thead>
             <tbody>
             @php($badge = ['pending'=>'warning','disetujui'=>'success','revisi'=>'danger','ditolak'=>'danger'])
             @forelse($absensis as $absensi)
                 <tr>
-                    <td>{{ $absensi->tanggal->format('Y-m-d') }}</td>
-                    <td>{{ $absensi->jam_masuk }} - {{ $absensi->jam_pulang ?: '-' }}</td>
-                    <td>{{ $absensi->keterangan ?: 'Tidak ada' }}</td>
-                    <td><a href="{{ route('mahasiswa.absensi.preview', $absensi->id) }}" target="_blank" class="btn btn-sm btn-outline-secondary">Lihat</a></td>
-                    <td><span class="badge bg-{{ $badge[$absensi->status] ?? 'secondary' }}">{{ ucfirst($absensi->status) }}</span></td>
-                    <td>{{ $absensi->catatan_mitra ?: 'Tidak ada' }}</td>
+                    <td class="align-top">{{ $absensi->tanggal->format('Y-m-d') }}</td>
+                    <td class="align-top">{{ $absensi->jam_masuk }} - {{ $absensi->jam_pulang ?: '-' }}</td>
+                    <td class="align-top">{{ $absensi->keterangan ?: 'Tidak ada' }}</td>
+                    <td class="align-top"><div class="student-action-buttons"><a href="{{ route('mahasiswa.absensi.preview', $absensi->id) }}" target="_blank" class="btn btn-sm btn-outline-secondary">Lihat</a></div></td>
+                    <td class="align-top"><span class="badge bg-{{ $badge[$absensi->status] ?? 'secondary' }} student-badge">{{ ucwords(str_replace('_', ' ', $absensi->status)) }}</span></td>
+                    <td class="align-top">{{ $absensi->catatan_mitra ?: 'Tidak ada' }}</td>
                 </tr>
             @empty
                 <tr><td colspan="6" class="text-center text-muted py-4">Belum ada absensi.</td></tr>
@@ -92,6 +90,19 @@
             </tbody>
         </table>
     </div>
-    {{ $absensis->links() }}
+    @if($absensis->hasMorePages() || $absensis->currentPage() > 1)
+    <div class="mt-3 d-flex justify-content-end gap-2">
+        @if($absensis->onFirstPage())
+            <span class="btn btn-sm btn-secondary disabled">Sebelumnya</span>
+        @else
+            <a href="{{ $absensis->previousPageUrl() }}" class="btn btn-sm btn-outline-primary">Sebelumnya</a>
+        @endif
+        @if($absensis->hasMorePages())
+            <a href="{{ $absensis->nextPageUrl() }}" class="btn btn-sm btn-outline-primary">Berikutnya</a>
+        @else
+            <span class="btn btn-sm btn-secondary disabled">Berikutnya</span>
+        @endif
+    </div>
+    @endif
 </div>
 @endsection

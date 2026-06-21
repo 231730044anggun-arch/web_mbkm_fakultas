@@ -62,7 +62,7 @@
     <a href="{{ route('admin.sk-kolektif.index') }}"
        class="nav-link {{ request()->is('admin/sk-kolektif*') ? 'active' : '' }}">
         <i class="bi bi-file-earmark-check me-2"></i>
-        SK Magang Kolektif
+        SK Magang
     </a>
 
     <a href="{{ route('profile.show') }}" 
@@ -93,6 +93,7 @@
     </a>
 
     @php
+        $mahasiswaLogin = auth()->user()->mahasiswaProfile;
         $pengajuanAktif = auth()->user()
             ->mahasiswaProfile?->pengajuans()
             ->where('jenis_pengajuan', 'surat_keterangan')
@@ -115,7 +116,7 @@
             Logbook
         </a>
 
-        @if(config('mbkm.absensi_aktif'))
+        @if($mahasiswaLogin?->absensiAktif())
         <a href="{{ route('mahasiswa.absensi.index') }}"
            class="nav-link {{ request()->is('mahasiswa/absensi*') ? 'active' : '' }}">
             <i class="bi bi-calendar2-check me-2"></i>
@@ -149,7 +150,7 @@
             Logbook
         </a>
 
-        @if(config('mbkm.absensi_aktif'))
+        @if($mahasiswaLogin?->absensiAktif())
         <a href="{{ route('mahasiswa.absensi.index') }}"
            class="nav-link {{ request()->is('mahasiswa/absensi*') ? 'active' : '' }}">
             <i class="bi bi-calendar2-check me-2"></i>
@@ -254,13 +255,13 @@
         Dashboard
     </a>
 
-    <a href="{{ route('pembimbing.mahasiswa.index') }}"
-       class="nav-link {{ request()->is('pembimbing-lapangan/mahasiswa*') ? 'active' : '' }}">
-        <i class="bi bi-people me-2"></i>
-        Mahasiswa Bimbingan
+    <a href="{{ route('pembimbing.bimbingan.index') }}"
+       class="nav-link {{ request()->is('pembimbing-lapangan/bimbingan*') ? 'active' : '' }}">
+        <i class="bi bi-chat-dots me-2"></i>
+        Bimbingan
     </a>
 
-    @if(config('mbkm.absensi_aktif'))
+    @if(config('mbkm.absensi_aktif', true))
     <a href="{{ route('pembimbing.absensi.index') }}"
        class="nav-link {{ request()->is('pembimbing-lapangan/absensi*') ? 'active' : '' }}">
         <i class="bi bi-calendar2-check me-2"></i>

@@ -3,7 +3,7 @@
 @section('page-title', 'Detail Pedoman & SOP')
 
 @section('content')
-@php($hasFile = $pedoman->file_path && \Illuminate\Support\Facades\Storage::disk('public')->exists($pedoman->file_path))
+@php($hasFile = (bool) $pedoman->file_path)
 <div class="card p-4">
     <h6 class="fw-bold mb-3">{{ $pedoman->judul }}</h6>
     <table class="table table-borderless">

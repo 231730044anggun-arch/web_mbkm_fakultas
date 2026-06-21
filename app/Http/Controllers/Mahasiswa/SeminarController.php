@@ -1,6 +1,7 @@
 <?php
 namespace App\Http\Controllers\Mahasiswa;
 
+use App\Http\Controllers\Concerns\HandlesSecurePublicFiles;
 use App\Http\Controllers\Controller;
 use App\Models\Dokumen;
 use App\Models\KelayakanSeminar;
@@ -15,6 +16,7 @@ use PDF;
 
 class SeminarController extends Controller
 {
+    use HandlesSecurePublicFiles;
     public function index()
     {
         $mahasiswa = auth()->user()->mahasiswaProfile;
@@ -40,20 +42,21 @@ class SeminarController extends Controller
         $request->validate([
             'laporan_hasil_magang' => 'required|file|mimes:pdf|max:10240',
             'output_magang' => 'required|string|min:20',
-            'produk_magang' => 'nullable|file|mimes:pdf,zip,rar,doc,docx,xls,xlsx,ppt,pptx,jpg,jpeg,png|max:20480',
+            'produk_magang' => 'required|file|mimes:pdf,zip,rar,doc,docx,xls,xlsx,ppt,pptx,jpg,jpeg,png|max:20480',
+            'draft_jurnal' => 'required|file|mimes:pdf,doc,docx|max:10240',
             'catatan_mahasiswa' => 'nullable|string|max:1000',
         ]);
 
         $dosenId = $pengajuan->bimbingans->first()?->dosen_id;
         $old = $pengajuan->kelayakanSeminar;
         $laporanPath = $request->file('laporan_hasil_magang')->store('documents/kelayakan-seminar/laporan', 'public');
-        $produkPath = $request->hasFile('produk_magang')
-            ? $request->file('produk_magang')->store('documents/kelayakan-seminar/produk', 'public')
-            : ($old?->produk_magang);
+        $produkPath = $request->file('produk_magang')->store('documents/kelayakan-seminar/produk', 'public');
+        $draftJurnalPath = $request->file('draft_jurnal')->store('documents/kelayakan-seminar/draft-jurnal', 'public');
 
         if ($old) {
-            if ($old->laporan_hasil_magang) Storage::disk('public')->delete($old->laporan_hasil_magang);
-            if ($request->hasFile('produk_magang') && $old->produk_magang) Storage::disk('public')->delete($old->produk_magang);
+            if ($old->laporan_hasil_magang) $this->deletePublicFileIfExists($old->laporan_hasil_magang);
+            if ($old->produk_magang) $this->deletePublicFileIfExists($old->produk_magang);
+            if ($old->draft_jurnal) $this->deletePublicFileIfExists($old->draft_jurnal);
         }
 
         $kelayakan = KelayakanSeminar::updateOrCreate(
@@ -65,6 +68,7 @@ class SeminarController extends Controller
                 'laporan_hasil_magang' => $laporanPath,
                 'output_magang' => $request->output_magang,
                 'produk_magang' => $produkPath,
+                'draft_jurnal' => $draftJurnalPath,
                 'catatan_mahasiswa' => $request->catatan_mahasiswa,
                 'status_persetujuan_dosen' => 'menunggu',
                 'catatan_dosen' => null,
@@ -74,6 +78,10 @@ class SeminarController extends Controller
                 'tanggal_persetujuan_pembimbing' => null,
             ]
         );
+
+        $this->syncDokumenArsip($pengajuan->id, 'laporan_hasil_magang', $laporanPath, 'Laporan Hasil Magang dari Kelayakan Seminar');
+        $this->syncDokumenArsip($pengajuan->id, 'produk_magang', $produkPath, 'Produk Magang dari Kelayakan Seminar');
+        $this->syncDokumenArsip($pengajuan->id, 'draft_jurnal', $draftJurnalPath, 'Draft Jurnal dari Kelayakan Seminar');
 
         if ($pengajuan->bimbingans->first()?->dosen?->user) {
             $this->notify($pengajuan->bimbingans->first()->dosen->user->id, 'Kelayakan Seminar Baru', 'Mahasiswa ' . ($pengajuan->mahasiswa->nama_lengkap ?? '-') . ' mengirim bahan kelayakan seminar.', route('dosen.seminar.show', $kelayakan->id));
@@ -141,7 +149,7 @@ class SeminarController extends Controller
     public function file($kelayakanId, string $type)
     {
         $kelayakan = KelayakanSeminar::with('pengajuan')->findOrFail($kelayakanId);
-        abort_unless($kelayakan->mahasiswa_id === auth()->user()->mahasiswaProfile?->id, 403);
+        abort_unless($this->idsMatch($kelayakan->mahasiswa_id, auth()->user()->mahasiswaProfile?->id), 403);
         return $this->fileResponse($kelayakan, $type, false);
     }
 
@@ -150,13 +158,13 @@ class SeminarController extends Controller
         $pengajuan = $this->findOwnedPengajuan($pengajuanId);
         abort_unless(in_array($pengajuan->status_seminar, ['terjadwal', 'selesai'], true), 403);
         $dokumen = Dokumen::where('pengajuan_id', $pengajuan->id)->where('jenis_dokumen', 'surat_seminar')->where('status_verifikasi', 'valid')->latest()->first();
-        if ($dokumen && Storage::disk('public')->exists($dokumen->file_path)) return Storage::disk('public')->download($dokumen->file_path);
+        if ($dokumen && $this->publicFileExists($dokumen->file_path)) return $this->publicDownloadResponse($dokumen->file_path);
         $html = view('surat.sk_seminar', compact('pengajuan'))->render();
         $pdf = PDF::loadHTML($html)->setPaper('a4', 'portrait');
         $path = 'surat/sk_seminar_' . $pengajuan->id . '.pdf';
         Storage::disk('public')->put($path, $pdf->output());
         Dokumen::updateOrCreate(['pengajuan_id' => $pengajuan->id, 'jenis_dokumen' => 'surat_seminar'], ['file_path' => $path, 'tanggal_upload' => now(), 'status_verifikasi' => 'valid']);
-        return Storage::disk('public')->download($path);
+        return $this->publicDownloadResponse($path);
     }
 
     private function findOwnedPengajuan($pengajuanId): PengajuanMagang
@@ -169,16 +177,18 @@ class SeminarController extends Controller
     private function seminarEligibility(PengajuanMagang $pengajuan): array
     {
         $reasons = [];
+        $isAngkatanKhusus = $pengajuan->mahasiswa?->isAngkatanKhususSkKolektif() ?? false;
         if (!in_array($pengajuan->status_pengajuan, ['berjalan', 'selesai'], true)) $reasons[] = 'Pengajuan SK Magang belum berjalan/selesai.';
+        if ($isAngkatanKhusus && !$pengajuan->penempatanLengkap()) $reasons[] = 'Data penempatan magang Anda belum lengkap. Silakan hubungi admin/fakultas untuk melengkapi dosen pembimbing, pembimbing lapangan, instansi, dan tanggal magang.';
         if (!$pengajuan->dokumens->where('jenis_dokumen', 'sk_magang')->where('status_verifikasi', 'valid')->whereNotNull('file_path')->count()) $reasons[] = 'SK Magang belum tersedia. Mahasiswa belum bisa mengajukan seminar.';
         if ($pengajuan->bimbingans->isEmpty()) $reasons[] = 'Dosen pembimbing belum ditugaskan.';
         if (!$pengajuan->pembimbing_lapangan_id) $reasons[] = 'Pembimbing lapangan belum terhubung.';
         if ($pengajuan->bimbinganFormals->isEmpty()) $reasons[] = 'Anda belum dapat mengajukan Seminar Magang karena belum memiliki riwayat bimbingan dengan dosen pembimbing.';
-        if (!$pengajuan->kelayakanSeminar?->isApproved()) $reasons[] = 'Anda belum dapat mengajukan Seminar Magang karena laporan, output magang, dan produk magang belum disetujui oleh dosen pembimbing dan pembimbing lapangan.';
-        $missingWeeks = $this->findMissingWeeks($pengajuan);
+        if (!$pengajuan->kelayakanSeminar?->isApproved()) $reasons[] = 'Anda belum dapat mengajukan Seminar Magang karena laporan, output magang, produk magang, dan draft jurnal belum disetujui oleh dosen pembimbing dan pembimbing lapangan.';
+        $missingWeeks = $this->findMissingWeeks($pengajuan, $isAngkatanKhusus ? $pengajuan->mahasiswa?->deadlineLaporanMagang() : null);
         if (count($missingWeeks)) $reasons[] = 'Logbook belum diisi pada minggu: ' . implode(', ', $missingWeeks) . '.';
         if ($pengajuan->logbooks->filter(fn($l) => ($l->status_dosen ?? 'pending') !== 'disetujui' || ($l->status_mitra ?? 'pending') !== 'disetujui')->count()) $reasons[] = 'Masih ada logbook yang belum disetujui dosen dan pembimbing lapangan.';
-        if (config('mbkm.absensi_aktif')) {
+        if ($pengajuan->mahasiswa?->absensiAktif()) {
             $missingAbsensi = $this->findMissingAbsensiDates($pengajuan);
             if (count($missingAbsensi)) $reasons[] = 'Absensi magang belum lengkap atau belum disetujui pada tanggal: ' . implode(', ', $missingAbsensi) . '.';
             if ($pengajuan->absensis->whereIn('status', ['pending', 'revisi', 'ditolak'])->count()) $reasons[] = 'Masih ada absensi magang pending/revisi/ditolak.';
@@ -187,11 +197,14 @@ class SeminarController extends Controller
         return ['allowed' => count($reasons) === 0, 'reasons' => $reasons, 'missing' => $missingWeeks];
     }
 
-    private function findMissingWeeks(PengajuanMagang $pengajuan): array
+    private function findMissingWeeks(PengajuanMagang $pengajuan, $toDate = null): array
     {
         $start = $pengajuan->tanggal_mulai ? Carbon::parse($pengajuan->tanggal_mulai)->startOfWeek() : null;
         if (!$start) return [];
-        $end = $pengajuan->tanggal_selesai ? Carbon::parse($pengajuan->tanggal_selesai) : Carbon::now();
+        $end = $toDate ? Carbon::parse($toDate) : ($pengajuan->tanggal_selesai ? Carbon::parse($pengajuan->tanggal_selesai) : Carbon::now());
+        if ($pengajuan->tanggal_selesai && $end->greaterThan(Carbon::parse($pengajuan->tanggal_selesai))) {
+            $end = Carbon::parse($pengajuan->tanggal_selesai);
+        }
         $filled = $pengajuan->logbooks->mapWithKeys(fn($l) => [Carbon::parse($l->tanggal)->startOfWeek()->toDateString() => true]);
         $missing = [];
         for ($cursor = $start->copy(); $cursor->lessThanOrEqualTo($end); $cursor->addWeek()) if (!isset($filled[$cursor->toDateString()])) $missing[] = $cursor->toDateString();
@@ -216,10 +229,26 @@ class SeminarController extends Controller
         Notifikasi::create(['user_id' => $userId, 'judul' => $judul, 'pesan' => $pesan, 'status' => 'belum', 'target_url' => $targetUrl]);
     }
 
+    private function syncDokumenArsip(int $pengajuanId, string $jenis, string $path, string $catatan): void
+    {
+        Dokumen::updateOrCreate(
+            ['pengajuan_id' => $pengajuanId, 'jenis_dokumen' => $jenis],
+            [
+                'file_path' => $path,
+                'tanggal_upload' => now()->toDateString(),
+                'status_verifikasi' => 'valid',
+                'catatan' => $catatan,
+            ]
+        );
+    }
+
     private function fileResponse(KelayakanSeminar $kelayakan, string $type, bool $download)
     {
-        $path = $type === 'produk' ? $kelayakan->produk_magang : $kelayakan->laporan_hasil_magang;
-        abort_unless($path && Storage::disk('public')->exists($path), 404);
-        return $download ? Storage::disk('public')->download($path) : response()->file(Storage::disk('public')->path($path), ['Content-Disposition' => 'inline']);
+        $path = match ($type) {
+            'produk' => $kelayakan->produk_magang,
+            'jurnal' => $kelayakan->draft_jurnal,
+            default => $kelayakan->laporan_hasil_magang,
+        };
+        return $download ? $this->publicDownloadResponse($path) : $this->publicInlineResponse($path, basename($this->normalizePublicPath($path) ?: $path));
     }
 }

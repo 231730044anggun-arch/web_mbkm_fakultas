@@ -11,13 +11,21 @@ class LaporanKukerta extends Model
         'mahasiswa_id',
         'lokasi_kukerta',
         'target_kukerta',
+        'tanggal_mulai_kukerta',
+        'tanggal_selesai_kukerta',
         'dokumentasi_kukerta',
+        'foto_dokumentasi_kukerta',
         'laporan_kukerta',
+        'output_kukerta_file',
+        'output_kukerta_link',
         'status',
     ];
 
     protected $casts = [
         'dokumentasi_kukerta' => 'array',
+        'foto_dokumentasi_kukerta' => 'array',
+        'tanggal_mulai_kukerta' => 'date',
+        'tanggal_selesai_kukerta' => 'date',
     ];
 
     public function pengajuan()

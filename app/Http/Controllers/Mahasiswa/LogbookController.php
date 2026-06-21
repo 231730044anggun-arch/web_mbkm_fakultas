@@ -1,6 +1,7 @@
 <?php
 namespace App\Http\Controllers\Mahasiswa;
 
+use App\Http\Controllers\Concerns\HandlesSecurePublicFiles;
 use App\Http\Controllers\Controller;
 use App\Models\Logbook;
 use App\Models\Notifikasi;
@@ -14,13 +15,14 @@ use Symfony\Component\HttpFoundation\ResponseHeaderBag;
 
 class LogbookController extends Controller
 {
+    use HandlesSecurePublicFiles;
     public function index(Request $request, $pengajuanId)
     {
         $pengajuan = $this->findOwnedPengajuan($pengajuanId);
         if (!$this->hasPublishedSuratKeterangan($pengajuan)) {
             return view('mahasiswa.info-butuh-pengajuan', [
                 'feature' => 'Logbook',
-                'message' => 'Logbook belum dapat diisi karena Surat Keterangan Magang belum diterbitkan.',
+                'message' => $this->logbookLockedMessage($pengajuan),
             ]);
         }
 
@@ -29,7 +31,11 @@ class LogbookController extends Controller
         if ($request->filled('to')) $query->where('tanggal', '<=', $request->to);
         if ($request->filled('status')) $query->where('status_validasi', $request->status);
         $logbooks  = $query->orderBy('tanggal', 'desc')->paginate(10)->withQueryString();
-        $missing = $this->findMissingWeeks($pengajuan);
+        $missing = $this->findMissingWeeks(
+            $pengajuan,
+            null,
+            $pengajuan->mahasiswa?->isAngkatanKhususSkKolektif() ? $pengajuan->mahasiswa?->deadlineLaporanMagang() : null
+        );
         return view('mahasiswa.logbook.index', compact('pengajuan', 'logbooks', 'missing'));
     }
 
@@ -37,12 +43,16 @@ class LogbookController extends Controller
     {
         $pengajuan = $this->findOwnedPengajuan($pengajuanId);
         if (!$this->hasPublishedSuratKeterangan($pengajuan)) {
-            return redirect()->back()->with('error', 'Logbook belum dapat diisi karena Surat Keterangan Magang belum diterbitkan.');
+            return redirect()->back()->with('error', $this->logbookLockedMessage($pengajuan));
+        }
+
+        $isAngkatanKhusus = $pengajuan->mahasiswa?->isAngkatanKhususSkKolektif() ?? false;
+        if ($isAngkatanKhusus && !$pengajuan->penempatanLengkap()) {
+            return redirect()->back()->with('error', 'Logbook belum dapat diisi karena data penempatan magang belum lengkap.');
         }
 
         $request->validate([
-            
-            'tanggal'         => 'required|date',
+            'tanggal'         => $isAngkatanKhusus ? 'required|date' : 'nullable|date',
             'kegiatan'        => 'required|string',
             'output_kegiatan' => 'required|string|max:2000',
             'kendala'         => 'nullable|string|max:2000',
@@ -52,9 +62,10 @@ class LogbookController extends Controller
             'bukti_foto'      => 'required|image|max:5120',
         ]);
 
-        $this->ensureTanggalDalamPeriode($pengajuan, $request->tanggal);
+        $tanggalLogbook = $isAngkatanKhusus ? $request->tanggal : now()->toDateString();
+        $this->ensureTanggalDalamPeriode($pengajuan, $tanggalLogbook);
 
-        $existingToday = Logbook::where('pengajuan_id', $pengajuan->id)->whereDate('tanggal', $request->tanggal)->first();
+        $existingToday = Logbook::where('pengajuan_id', $pengajuan->id)->whereDate('tanggal', $tanggalLogbook)->first();
         if ($existingToday) {
             return redirect()->back()->withInput()->with('error', 'Logbook untuk tanggal tersebut sudah ada. Satu tanggal hanya boleh memiliki satu logbook.');
         }
@@ -63,7 +74,7 @@ class LogbookController extends Controller
 
         $logbook = Logbook::create([
             'pengajuan_id'     => $pengajuanId,
-            'tanggal'          => $request->tanggal,
+            'tanggal'          => $tanggalLogbook,
             'kegiatan'         => $request->kegiatan,
             'output_kegiatan'  => $request->output_kegiatan,
             'kendala'          => $request->kendala,
@@ -139,9 +150,13 @@ class LogbookController extends Controller
             return redirect()->route('mahasiswa.logbook.index', $pengajuan->id)->with('error', 'Logbook tidak dapat diubah karena sudah disetujui.');
         }
 
+        $isAngkatanKhusus = $pengajuan->mahasiswa?->isAngkatanKhususSkKolektif() ?? false;
+        if ($isAngkatanKhusus && !$pengajuan->penempatanLengkap()) {
+            return redirect()->back()->with('error', 'Logbook belum dapat diisi karena data penempatan magang belum lengkap.');
+        }
+
         $request->validate([
-            
-            'tanggal'         => 'required|date',
+            'tanggal'         => $isAngkatanKhusus ? 'required|date' : 'nullable|date',
             'kegiatan'        => 'required|string',
             'output_kegiatan' => 'required|string|max:2000',
             'kendala'         => 'nullable|string|max:2000',
@@ -151,25 +166,36 @@ class LogbookController extends Controller
             'bukti_foto'      => 'nullable|image|max:5120',
         ]);
 
-        $this->ensureTanggalDalamPeriode($pengajuan, $request->tanggal);
+        $tanggalLogbook = $isAngkatanKhusus ? $request->tanggal : $logbook->tanggal;
+        $this->ensureTanggalDalamPeriode($pengajuan, $tanggalLogbook);
         $duplikatTanggal = Logbook::where('pengajuan_id', $pengajuan->id)
-            ->whereDate('tanggal', $request->tanggal)
+            ->whereDate('tanggal', $tanggalLogbook)
             ->where('id', '!=', $logbook->id)
             ->exists();
         if ($duplikatTanggal) {
             return redirect()->back()->withInput()->with('error', 'Logbook untuk tanggal tersebut sudah ada. Satu tanggal hanya boleh memiliki satu logbook.');
         }
 
-        $data = $request->only(['tanggal', 'kegiatan', 'output_kegiatan', 'kendala', 'solusi', 'jam_mulai', 'jam_selesai']);
-        $data['status_validasi'] = 'pending';
-        $data['status_dosen'] = 'pending';
-        $data['status_mitra'] = 'pending';
-        $data['catatan_dosen'] = null;
-        $data['catatan_mitra'] = null;
+        $data = $request->only(['kegiatan', 'output_kegiatan', 'kendala', 'solusi', 'jam_mulai', 'jam_selesai']);
+        $data['tanggal'] = $tanggalLogbook;
+
+        if (($logbook->status_dosen ?? 'pending') === 'revisi') {
+            $data['status_dosen'] = 'pending';
+            $data['catatan_dosen'] = null;
+        }
+
+        if (($logbook->status_mitra ?? 'pending') === 'revisi') {
+            $data['status_mitra'] = 'pending';
+            $data['catatan_mitra'] = null;
+        }
+
+        $nextDosen = $data['status_dosen'] ?? ($logbook->status_dosen ?: 'pending');
+        $nextMitra = $data['status_mitra'] ?? ($logbook->status_mitra ?: 'pending');
+        $data['status_validasi'] = ($nextDosen === 'disetujui' && $nextMitra === 'disetujui') ? 'disetujui' : 'pending';
 
         if ($request->hasFile('bukti_foto')) {
             if ($logbook->bukti_foto) {
-                Storage::disk('public')->delete($logbook->bukti_foto);
+                $this->deletePublicFileIfExists($logbook->bukti_foto);
             }
             $data['bukti_foto'] = $request->file('bukti_foto')->store('images/logbook', 'public');
         }
@@ -187,7 +213,7 @@ class LogbookController extends Controller
         }
 
         if ($logbook->bukti_foto) {
-            Storage::disk('public')->delete($logbook->bukti_foto);
+            $this->deletePublicFileIfExists($logbook->bukti_foto);
         }
         $logbook->delete();
 
@@ -196,11 +222,8 @@ class LogbookController extends Controller
     public function previewFoto(Logbook $logbook)
     {
         $pengajuan = $this->findOwnedPengajuan($logbook->pengajuan_id);
-        abort_unless($logbook->pengajuan_id === $pengajuan->id, 403);
-        abort_if(!$logbook->bukti_foto || !Storage::disk('public')->exists($logbook->bukti_foto), 404);
-
-        $extension = pathinfo($logbook->bukti_foto, PATHINFO_EXTENSION) ?: 'jpg';
-        return $this->inlineFile($logbook->bukti_foto, 'Bukti Logbook ' . ($pengajuan->mahasiswa->nama_lengkap ?? 'Mahasiswa') . '.' . $extension);
+        abort_unless($this->idsMatch($logbook->pengajuan_id, $pengajuan->id), 403);
+        $extension = pathinfo($this->normalizePublicPath($logbook->bukti_foto) ?: $logbook->bukti_foto, PATHINFO_EXTENSION) ?: 'jpg'; return $this->publicInlineResponse($logbook->bukti_foto, 'Bukti Logbook ' . ($pengajuan->mahasiswa->nama_lengkap ?? 'Mahasiswa') . '.' . $extension);
     }
 
     public function export(Request $request, $pengajuanId)
@@ -208,7 +231,7 @@ class LogbookController extends Controller
         $this->findOwnedPengajuan($pengajuanId);
         $pengajuan = PengajuanMagang::with(['mahasiswa', 'mitra', 'bimbingans.dosen', 'periode', 'dokumens'])->findOrFail($pengajuanId);
         if (!$this->hasPublishedSuratKeterangan($pengajuan)) {
-            return redirect()->back()->with('error', 'Logbook belum dapat diexport karena Surat Keterangan Magang belum diterbitkan.');
+            return redirect()->back()->with('error', 'Logbook belum dapat diexport. ' . $this->logbookLockedMessage($pengajuan));
         }
         $query = Logbook::where('pengajuan_id', $pengajuanId);
 
@@ -233,9 +256,12 @@ class LogbookController extends Controller
     }
     private function findMissingWeeks(PengajuanMagang $pengajuan, $logbooks = null, $toDate = null)
     {
-        $start = $pengajuan->tanggal_mulai ? Carbon::parse($pengajuan->tanggal_mulai)->startOfWeek() : null;
+        $mulai = $pengajuan->tanggal_mulai ?: $pengajuan->mahasiswa?->defaultTanggalMulaiMagang();
+        $selesai = $pengajuan->tanggal_selesai ?: $pengajuan->mahasiswa?->defaultTanggalSelesaiMagang();
+        $start = $mulai ? Carbon::parse($mulai)->startOfWeek() : null;
         $end = $toDate ? Carbon::parse($toDate) : Carbon::now();
-        if ($pengajuan->tanggal_selesai) $end = Carbon::parse($pengajuan->tanggal_selesai);
+        if ($selesai && !$toDate) $end = Carbon::parse($selesai);
+        if ($selesai && $end->greaterThan(Carbon::parse($selesai))) $end = Carbon::parse($selesai);
         if (!$start) return [];
 
         $weeks = [];
@@ -263,9 +289,28 @@ class LogbookController extends Controller
 
     private function findOwnedPengajuan($pengajuanId): PengajuanMagang
     {
-        return PengajuanMagang::with(['dokumens', 'mahasiswa', 'bimbingans.dosen.user', 'mitra.mitraUsers.user'])
+        return PengajuanMagang::with(['dokumens', 'mahasiswa.angkatanMaster', 'bimbingans.dosen.user', 'mitra.mitraUsers.user'])
             ->where('mahasiswa_id', auth()->user()->mahasiswaProfile?->id)
             ->findOrFail($pengajuanId);
+    }
+
+    private function ensureTanggalDalamPeriode(PengajuanMagang $pengajuan, ?string $tanggal): void
+    {
+        if (!$tanggal) {
+            abort(422, 'Tanggal logbook wajib diisi.');
+        }
+
+        $mulai = $pengajuan->tanggal_mulai ?: $pengajuan->mahasiswa?->defaultTanggalMulaiMagang();
+        $selesai = $pengajuan->tanggal_selesai ?: $pengajuan->mahasiswa?->defaultTanggalSelesaiMagang();
+
+        if (!$mulai || !$selesai) {
+            abort(422, 'Tanggal magang belum lengkap. Silakan hubungi admin/fakultas.');
+        }
+
+        $tanggalLogbook = Carbon::parse($tanggal)->toDateString();
+        if ($tanggalLogbook < Carbon::parse($mulai)->toDateString() || $tanggalLogbook > Carbon::parse($selesai)->toDateString()) {
+            abort(422, 'Tanggal logbook harus berada dalam rentang tanggal magang.');
+        }
     }
 
     private function hasPublishedSuratKeterangan(PengajuanMagang $pengajuan): bool
@@ -275,6 +320,15 @@ class LogbookController extends Controller
             ->where('status_verifikasi', 'valid')
             ->whereNotNull('file_path')
             ->isNotEmpty();
+    }
+
+    private function logbookLockedMessage(PengajuanMagang $pengajuan): string
+    {
+        if ($pengajuan->mahasiswa?->isAngkatanKhususSkKolektif()) {
+            return 'Logbook belum dapat diisi karena SK Magang atau data penempatan magang belum tersedia.';
+        }
+
+        return 'Logbook belum dapat diisi karena Surat Keterangan Magang belum diterbitkan.';
     }
 
     private function inlineFile(string $path, string $filename)

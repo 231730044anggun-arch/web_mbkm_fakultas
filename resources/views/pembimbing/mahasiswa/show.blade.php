@@ -21,7 +21,7 @@
             <tr><th>Jabatan</th><td>{{ $pengajuan->pembimbingLapangan->jabatan ?? $pengajuan->pic_jabatan ?? '-' }}</td></tr>
             <tr><th>No HP</th><td>{{ $pengajuan->pembimbingLapangan->no_hp ?? $pengajuan->pic_no_hp ?? '-' }}</td></tr>
             <tr><th>Email</th><td>{{ $pengajuan->pembimbingLapangan->email ?? $pengajuan->pic_email ?? '-' }}</td></tr>
-            <tr><th>Status Magang</th><td><span class="badge bg-{{ $pengajuan->status_pengajuan === 'berjalan' ? 'success' : 'secondary' }}">{{ $pengajuan->status_pengajuan }}</span></td></tr>
+            <tr><th>Status Magang</th><td><span class="badge bg-{{ $pengajuan->status_pengajuan === 'berjalan' ? 'success' : 'secondary' }}">{{ ucwords(str_replace('_', ' ', $pengajuan->status_pengajuan)) }}</span></td></tr>
         </table>
     </div>
     <div class="d-flex gap-2">

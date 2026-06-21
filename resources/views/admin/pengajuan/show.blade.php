@@ -6,9 +6,7 @@
 @php
     $isSuratPengantar = $pengajuan->jenis_pengajuan === 'surat_pengantar';
     $isSkMagang = $pengajuan->jenis_pengajuan === 'surat_keterangan';
-    $hasFile = fn($dokumen) => $dokumen
-        && $dokumen->file_path
-        && \Illuminate\Support\Facades\Storage::disk('public')->exists($dokumen->file_path);
+    $hasFile = fn($dokumen) => $dokumen && $dokumen->file_path;
     $suratPengantar = $pengajuan->dokumens
         ->where('jenis_dokumen', 'surat_pengantar')
         ->where('status_verifikasi', 'valid')
@@ -58,14 +56,14 @@
                     <tr><td>Email Pembimbing</td><td>{{ $pengajuan->pembimbingLapangan->email ?? $pengajuan->pic_email ?? $pengajuan->mitra->pembimbing_lapangan_email ?? '-' }}</td></tr>
                     <tr><td>Status Akun Pembimbing</td><td>
                         @if($pengajuan->pembimbingLapangan?->user)
-                            <span class="badge bg-{{ $pengajuan->pembimbingLapangan->user->status === 'aktif' ? 'success' : 'secondary' }}">{{ $pengajuan->pembimbingLapangan->user->status }}</span>
+                            <span class="badge bg-{{ $pengajuan->pembimbingLapangan->user->status === 'aktif' ? 'success' : 'secondary' }}">{{ ucwords(str_replace('_', ' ', $pengajuan->pembimbingLapangan->user->status)) }}</span>
                             <div class="small text-muted mt-1">Email akses: {{ $pengajuan->pembimbingLapangan->email_akses_terkirim ? 'sudah dikirim' : 'belum/gagal dikirim' }}</div>
                         @else
                             <span class="badge bg-light text-dark border">Belum dibuat/terhubung</span>
                         @endif
                     </td></tr>
                 @endif
-                <tr><td>Status</td><td><span class="badge bg-warning">{{ $pengajuan->status_pengajuan }}</span></td></tr>
+                <tr><td>Status</td><td><span class="badge bg-warning">{{ ucwords(str_replace('_', ' ', $pengajuan->status_pengajuan)) }}</span></td></tr>
                 @if($pengajuan->catatan_admin)
                 <tr><td>Catatan Admin</td><td>{{ $pengajuan->catatan_admin }}</td></tr>
                 @endif
@@ -96,11 +94,11 @@
         <div class="card p-4 mb-4">
             <h6 class="fw-bold mb-3">Status Dokumen</h6>
             <table class="table table-borderless">
-                <tr><td width="200">Surat Pengantar</td><td><span class="badge bg-{{ $pengajuan->status_surat_pengantar === 'valid' ? 'success' : ($pengajuan->status_surat_pengantar === 'revisi' ? 'danger' : 'warning') }}">{{ $pengajuan->status_surat_pengantar }}</span></td></tr>
+                <tr><td width="200">Surat Pengantar</td><td><span class="badge bg-{{ $pengajuan->status_surat_pengantar === 'valid' ? 'success' : ($pengajuan->status_surat_pengantar === 'revisi' ? 'danger' : 'warning') }}">{{ ucwords(str_replace('_', ' ', $pengajuan->status_surat_pengantar ?? 'belum_ada')) }}</span></td></tr>
                 @unless($isSuratPengantar)
-                <tr><td>Surat Keterangan</td><td><span class="badge bg-{{ $pengajuan->status_surat_keterangan === 'valid' ? 'success' : ($pengajuan->status_surat_keterangan === 'revisi' ? 'danger' : 'warning') }}">{{ $pengajuan->status_surat_keterangan ?? 'belum_ada' }}</span></td></tr>
+                <tr><td>Surat Keterangan</td><td><span class="badge bg-{{ $pengajuan->status_surat_keterangan === 'valid' ? 'success' : ($pengajuan->status_surat_keterangan === 'revisi' ? 'danger' : 'warning') }}">{{ ucwords(str_replace('_', ' ', $pengajuan->status_surat_keterangan ?? 'belum_ada')) }}</span></td></tr>
                 @unless($isSkMagang)
-                <tr><td>Laporan</td><td><span class="badge bg-{{ $pengajuan->status_laporan === 'valid' ? 'success' : ($pengajuan->status_laporan === 'revisi' ? 'danger' : 'warning') }}">{{ $pengajuan->status_laporan }}</span></td></tr>
+                <tr><td>Laporan</td><td><span class="badge bg-{{ $pengajuan->status_laporan === 'valid' ? 'success' : ($pengajuan->status_laporan === 'revisi' ? 'danger' : 'warning') }}">{{ ucwords(str_replace('_', ' ', $pengajuan->status_laporan ?? 'belum_ada')) }}</span></td></tr>
                 @endunless
                 @endunless
             </table>
@@ -116,7 +114,7 @@
                             <td>{{ $dokumen->tanggal_upload }}</td>
                             <td>
                                 @php $badge = ['pending'=>'warning','valid'=>'success','revisi'=>'danger']; @endphp
-                                <span class="badge bg-{{ $badge[$dokumen->status_verifikasi] ?? 'secondary' }}">{{ $dokumen->status_verifikasi }}</span>
+                                <span class="badge bg-{{ $badge[$dokumen->status_verifikasi] ?? 'secondary' }}">{{ ucwords(str_replace('_', ' ', $dokumen->status_verifikasi)) }}</span>
                             </td>
                             <td>
                                 @if($hasFile($dokumen))

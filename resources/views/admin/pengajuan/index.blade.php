@@ -27,7 +27,7 @@
                 <td>
                     {{ $p->jenis_pengajuan === 'surat_keterangan' ? 'SK Magang' : 'Surat Pengantar/Rekomendasi' }}
                     @if($p->jenis_pengajuan === 'surat_keterangan')
-                        <div class="small text-muted">Surat Keterangan: {{ $p->status_surat_keterangan ?? 'belum_ada' }}</div>
+                        <div class="small text-muted">Surat Keterangan: {{ ucwords(str_replace('_', ' ', $p->status_surat_keterangan ?? 'belum_ada')) }}</div>
                     @endif
                 </td>
                 <td>{{ $p->mitra->nama_instansi ?? $p->nama_instansi_manual ?? '-' }}</td>
@@ -36,7 +36,7 @@
                     @php
                         $badge = ['pending'=>'warning','disetujui'=>'success','revisi'=>'danger','ditolak'=>'danger','berjalan'=>'info','selesai'=>'secondary','dibatalkan'=>'dark'];
                     @endphp
-                    <span class="badge bg-{{ $badge[$p->status_pengajuan] ?? 'secondary' }}">{{ $p->status_pengajuan }}</span>
+                    <span class="badge bg-{{ $badge[$p->status_pengajuan] ?? 'secondary' }}">{{ ucwords(str_replace('_', ' ', $p->status_pengajuan)) }}</span>
                 </td>
                 <td>
                     <a href="{{ route('admin.pengajuan.show', $p->id) }}" class="btn btn-sm btn-outline-primary">Detail</a>

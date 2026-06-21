@@ -76,6 +76,11 @@ class MasterMahasiswaController extends Controller
         return $this->csvResponse('template_import_mahasiswa.csv', $this->headers(), []);
     }
 
+    public function templateXlsx()
+    {
+        return $this->xlsxResponse('template_import_mahasiswa.xlsx', $this->headers(), []);
+    }
+
     public function export()
     {
         $rows = MahasiswaProfile::with(['fakultas', 'prodi', 'kelasMaster', 'angkatanMaster'])->orderBy('nim')->get()->map(fn($m) => [

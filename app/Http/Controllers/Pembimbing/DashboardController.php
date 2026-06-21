@@ -11,7 +11,7 @@ class DashboardController extends Controller
         $pembimbing = auth()->user()->pembimbingLapangan;
         abort_unless($pembimbing, 403);
 
-        $pengajuans = PengajuanMagang::with(['mahasiswa.prodi', 'mitra', 'periode', 'penilaian'])
+        $pengajuans = PengajuanMagang::with(['mahasiswa.prodi', 'mitra', 'periode', 'penilaian', 'bimbingans.dosen'])
             ->where('pembimbing_lapangan_id', $pembimbing->id)
             ->where('jenis_pengajuan', 'surat_keterangan')
             ->whereIn('status_pengajuan', ['berjalan', 'selesai'])

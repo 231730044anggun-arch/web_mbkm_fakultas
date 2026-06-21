@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>@yield('title', 'MBKM Fakultas')</title>
+    <link rel="icon" href="{{ asset('assets/img/favicon.ico') }}" type="image/x-icon">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
     <style>
@@ -11,9 +13,11 @@
 
         body {
             background: #f3f0ff;
-            font-family: 'Segoe UI', sans-serif;
+            font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            font-size: 14px;
             display: flex;
             min-height: 100vh;
+            overflow-x: hidden;
         }
 
         /* ===== SIDEBAR ===== */
@@ -49,6 +53,13 @@
             font-size: 1.2rem;
             color: #7c3aed;
             flex-shrink: 0;
+        }
+
+        .app-logo-img {
+            width: 38px;
+            height: 38px;
+            object-fit: contain;
+            display: block;
         }
 
         .brand-text .brand-name {
@@ -186,6 +197,7 @@
             min-width: 0;
             display: flex;
             flex-direction: column;
+            width: 100%;
         }
 
         /* ===== TOPBAR ===== */
@@ -200,6 +212,20 @@
             position: sticky;
             top: 0;
             z-index: 99;
+        }
+
+        .mobile-menu-btn {
+            width: 38px;
+            height: 38px;
+            border: 1.5px solid #ede9fe;
+            border-radius: 11px;
+            background: #faf8ff;
+            color: #7c3aed;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            flex-shrink: 0;
         }
 
         .topbar-left h5 {
@@ -275,6 +301,8 @@
             padding: 28px 32px;
             flex: 1;
             background: #f3f0ff;
+            min-width: 0;
+            max-width: 100%;
         }
 
         /* ===== CARDS ===== */
@@ -292,6 +320,9 @@
             position: relative;
             overflow: hidden;
             border: none;
+            min-width: 0;
+            word-break: normal;
+            overflow-wrap: normal;
         }
 
         .stat-card.purple { background: #ede9fe; }
@@ -363,7 +394,78 @@
             color: #374151;
         }
 
+        .table th.align-top,
+        .table td.align-top {
+            vertical-align: top !important;
+        }
+
         .table tbody tr:hover { background: #faf8ff; }
+
+        .table-responsive {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .student-table {
+            width: 100%;
+            font-family: inherit;
+        }
+
+        .student-table thead th {
+            vertical-align: top !important;
+            font-size: 0.78rem;
+            font-weight: 700;
+            line-height: 1.35;
+            white-space: nowrap;
+        }
+
+        .student-table tbody td {
+            vertical-align: top !important;
+            font-size: 0.86rem;
+            line-height: 1.45;
+        }
+
+        .student-table .small,
+        .student-table small {
+            font-size: 0.78rem;
+            line-height: 1.4;
+        }
+
+        .student-action-buttons {
+            display: flex;
+            flex-direction: row;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .student-action-buttons .btn,
+        .student-action-buttons form,
+        .student-action-buttons button {
+            margin: 0;
+        }
+
+        .student-action-buttons .btn {
+            font-size: 0.8rem;
+            line-height: 1.25;
+            padding: 0.32rem 0.55rem;
+            white-space: nowrap;
+        }
+
+        .student-badge,
+        .student-table .badge {
+            font-size: 0.74rem;
+            font-weight: 600;
+            line-height: 1.2;
+            padding: 0.35rem 0.55rem;
+            border-radius: 8px;
+        }
+
+        .student-card-title {
+            font-size: 1rem;
+            font-weight: 700;
+            color: #1e1140;
+        }
 
         /* ===== BADGES ===== */
         .badge-purple { background: #ede9fe; color: #6d28d9; border-radius: 8px; padding: 4px 12px; font-size: 0.75rem; font-weight: 600; }
@@ -455,6 +557,162 @@
             color: #1e1140;
             margin-bottom: 16px;
         }
+
+        .sidebar-overlay {
+            display: none;
+        }
+
+        @media (max-width: 1023.98px) {
+            body {
+                display: block;
+            }
+
+            .sidebar {
+                position: fixed;
+                top: 0;
+                left: 0;
+                z-index: 1050;
+                width: min(84vw, 300px);
+                max-width: 300px;
+                min-height: 100vh;
+                height: 100vh;
+                transform: translateX(-105%);
+                transition: transform 0.24s ease;
+                box-shadow: 18px 0 42px rgba(30, 17, 64, 0.16);
+            }
+
+            body.sidebar-mobile-open .sidebar {
+                transform: translateX(0);
+            }
+
+            .sidebar-overlay {
+                display: block;
+                position: fixed;
+                inset: 0;
+                z-index: 1040;
+                background: rgba(30, 17, 64, 0.36);
+                opacity: 0;
+                pointer-events: none;
+                transition: opacity 0.2s ease;
+            }
+
+            body.sidebar-mobile-open .sidebar-overlay {
+                opacity: 1;
+                pointer-events: auto;
+            }
+
+            body.sidebar-mobile-open {
+                overflow: hidden;
+            }
+
+            .main-wrapper {
+                width: 100%;
+                max-width: 100%;
+                margin-left: 0;
+            }
+
+            .topbar {
+                min-height: 62px;
+                height: auto;
+                padding: 10px 14px;
+                gap: 10px;
+                align-items: center;
+            }
+
+            .mobile-menu-btn {
+                display: flex;
+            }
+
+            .topbar-left {
+                flex: 1;
+                min-width: 0;
+            }
+
+            .topbar-left h5 {
+                font-size: 0.95rem;
+                line-height: 1.25;
+                white-space: normal;
+            }
+
+            .topbar-breadcrumb {
+                display: none;
+            }
+
+            .topbar-right {
+                flex-shrink: 0;
+                gap: 6px;
+            }
+
+            .topbar-name {
+                display: none;
+            }
+
+            .topbar-user {
+                padding: 4px;
+            }
+
+            .content-area {
+                width: 100%;
+                max-width: 100%;
+                margin-left: 0;
+                padding: 18px 14px 24px;
+                overflow-x: hidden;
+            }
+
+            .card {
+                border-radius: 14px;
+                min-width: 0;
+            }
+
+            .stat-card {
+                padding: 18px 18px;
+                min-height: 108px;
+            }
+
+            .stat-label {
+                font-size: 0.78rem;
+                line-height: 1.35;
+                white-space: normal;
+            }
+
+            .stat-value {
+                font-size: 1.85rem;
+                line-height: 1.05;
+            }
+
+            .stat-icon {
+                font-size: 2.45rem;
+                right: 16px;
+            }
+
+            .table {
+                min-width: 720px;
+            }
+
+            .student-table {
+                min-width: 760px;
+            }
+
+            .student-action-buttons {
+                flex-wrap: wrap;
+            }
+        }
+
+        @media (max-width: 575.98px) {
+            .content-area {
+                padding: 16px 12px 22px;
+            }
+
+            .topbar {
+                padding: 9px 12px;
+            }
+
+            .notif-btn,
+            .mobile-menu-btn {
+                width: 36px;
+                height: 36px;
+            }
+        }
     </style>
     @stack('styles')
 </head>
@@ -466,7 +724,9 @@
 <!-- SIDEBAR -->
 <div class="sidebar">
     <div class="sidebar-brand">
-        <div class="brand-icon"><i class="bi bi-mortarboard-fill"></i></div>
+        <div class="brand-icon">
+            <img src="{{ asset('assets/img/logo-uin-sidebar.png') }}" alt="Logo UIN" class="app-logo-img">
+        </div>
         <div class="brand-text">
             <div class="brand-name">MBKM Fakultas</div>
             <div class="brand-sub">Sistem Informasi Magang</div>
@@ -497,10 +757,14 @@
         </form>
     </div>
 </div>
+<div class="sidebar-overlay" data-sidebar-close></div>
 
 <!-- MAIN -->
 <div class="main-wrapper">
     <div class="topbar">
+        <button type="button" class="mobile-menu-btn" data-sidebar-toggle aria-label="Buka menu">
+            <i class="bi bi-list"></i>
+        </button>
         <div class="topbar-left">
             <h5>@yield('page-title')</h5>
             <div class="topbar-breadcrumb">
@@ -553,6 +817,42 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const body = document.body;
+        const toggle = document.querySelector('[data-sidebar-toggle]');
+        const overlay = document.querySelector('[data-sidebar-close]');
+        const sidebarLinks = document.querySelectorAll('.sidebar .nav-link');
+
+        function closeSidebar() {
+            body.classList.remove('sidebar-mobile-open');
+        }
+
+        if (toggle) {
+            toggle.addEventListener('click', function () {
+                body.classList.toggle('sidebar-mobile-open');
+            });
+        }
+
+        if (overlay) {
+            overlay.addEventListener('click', closeSidebar);
+        }
+
+        sidebarLinks.forEach(function (link) {
+            link.addEventListener('click', function () {
+                if (window.innerWidth < 1024) {
+                    closeSidebar();
+                }
+            });
+        });
+
+        window.addEventListener('resize', function () {
+            if (window.innerWidth >= 1024) {
+                closeSidebar();
+            }
+        });
+    });
+</script>
 @stack('scripts')
 </body>
 </html>

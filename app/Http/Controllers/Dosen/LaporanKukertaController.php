@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Dosen;
 
+use App\Http\Controllers\Concerns\HandlesSecurePublicFiles;
 use App\Http\Controllers\Controller;
 use App\Models\Bimbingan;
 use App\Models\LaporanKukerta;
@@ -11,6 +12,7 @@ use Symfony\Component\HttpFoundation\ResponseHeaderBag;
 
 class LaporanKukertaController extends Controller
 {
+    use HandlesSecurePublicFiles;
     public function index()
     {
         $dosenId = auth()->user()->dosen?->id;
@@ -35,17 +37,13 @@ class LaporanKukertaController extends Controller
     public function file(LaporanKukerta $laporan, string $type, ?int $index = null)
     {
         $this->authorizeLaporan($laporan);
-        $path = $type === 'laporan'
-            ? $laporan->laporan_kukerta
-            : ($laporan->dokumentasi_kukerta[$index] ?? null);
-        abort_if(!$path || !Storage::disk('public')->exists($path), 404);
-
-        $disk = Storage::disk('public');
-        $absolutePath = $disk->path($path);
-        return response()->stream(fn() => readfile($absolutePath), 200, [
-            'Content-Type' => $disk->mimeType($path) ?: 'application/octet-stream',
-            'Content-Disposition' => HeaderUtils::makeDisposition(ResponseHeaderBag::DISPOSITION_INLINE, basename($path)),
-        ]);
+        $path = match ($type) {
+            'laporan' => $laporan->laporan_kukerta,
+            'foto' => ($laporan->foto_dokumentasi_kukerta[$index] ?? null),
+            'output' => $laporan->output_kukerta_file,
+            default => ($laporan->dokumentasi_kukerta[$index] ?? null),
+        };
+        return $this->publicInlineResponse($path, basename($this->normalizePublicPath($path) ?: $path));
     }
 
     private function authorizeLaporan(LaporanKukerta $laporan): void

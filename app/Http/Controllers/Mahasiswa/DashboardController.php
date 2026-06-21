@@ -8,9 +8,20 @@ class DashboardController extends Controller
 {
     public function index()
     {
-        $mahasiswaId = auth()->user()->mahasiswaProfile?->id;
-        $pengajuans  = PengajuanMagang::where('mahasiswa_id', $mahasiswaId)->with(['periode', 'mitra'])->latest()->get();
-        $aktif       = $pengajuans->where('status_pengajuan', 'berjalan')->first();
-        return view('mahasiswa.dashboard', compact('pengajuans', 'aktif'));
+        $mahasiswa = auth()->user()->mahasiswaProfile;
+        $mahasiswaId = $mahasiswa?->id;
+        $allPengajuans = PengajuanMagang::where('mahasiswa_id', $mahasiswaId)
+            ->with(['periode', 'mitra', 'dokumens', 'bimbingans.dosen.user', 'pembimbingLapangan.user'])
+            ->latest()
+            ->get();
+        $aktif = $allPengajuans->where('status_pengajuan', 'berjalan')->first();
+        $informasiMagang = $mahasiswa?->pengajuanMagangAktif();
+        $informasiMagang?->loadMissing(['periode', 'mitra', 'dokumens', 'bimbingans.dosen.user', 'pembimbingLapangan.user']);
+
+        $pengajuans = $mahasiswa?->isAngkatanKhususSkKolektif()
+            ? $allPengajuans->reject(fn($p) => $p->isPenempatanKolektif())
+            : $allPengajuans;
+
+        return view('mahasiswa.dashboard', compact('pengajuans', 'aktif', 'informasiMagang', 'mahasiswa'));
     }
 }

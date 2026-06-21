@@ -16,8 +16,12 @@ class PengajuanController extends Controller
 {
     public function index()
     {
-        $mahasiswaId = auth()->user()->mahasiswaProfile->id;
+        $mahasiswa = auth()->user()->mahasiswaProfile;
+        $mahasiswaId = $mahasiswa->id;
         $pengajuans  = PengajuanMagang::where('mahasiswa_id', $mahasiswaId)->with(['periode', 'mitra'])->latest()->get();
+        if ($mahasiswa->isAngkatanKhususSkKolektif()) {
+            $pengajuans = $pengajuans->reject(fn($pengajuan) => $pengajuan->isPenempatanKolektif());
+        }
         return view('mahasiswa.pengajuan.index', compact('pengajuans'));
     }
 
@@ -59,6 +63,9 @@ class PengajuanController extends Controller
     private function storeSuratPengantar(Request $request)
     {
         $mahasiswa = auth()->user()->mahasiswaProfile;
+        if ($mahasiswa?->isAngkatanKhususSkKolektif()) {
+            return redirect()->route('mahasiswa.pengajuan.create')->with('error', 'Pengajuan Surat Pengantar Magang sedang dinonaktifkan untuk angkatan 2023 karena alur menggunakan SK Magang kolektif dari admin.');
+        }
         $eligibility = $this->checkEligibility($mahasiswa, $request->periode_id);
         if (!$eligibility['allowed']) {
             return redirect()->back()->with('error', implode(' ', $eligibility['reasons']))->withInput();
@@ -164,11 +171,10 @@ class PengajuanController extends Controller
 
     private function storeSuratKeterangan(Request $request)
     {
-        if (config('mbkm.mode_angkatan_berjalan')) {
-            return redirect()->route('mahasiswa.pengajuan.create')->with('error', 'Pengajuan SK Magang sedang dinonaktifkan karena SK Magang diterbitkan secara kolektif oleh admin.');
-        }
-
         $mahasiswa = auth()->user()->mahasiswaProfile;
+        if ($mahasiswa?->isAngkatanKhususSkKolektif()) {
+            return redirect()->route('mahasiswa.pengajuan.create')->with('error', 'Pengajuan SK Magang sedang dinonaktifkan untuk angkatan 2023 karena SK Magang diterbitkan secara kolektif oleh admin.');
+        }
         $eligibility = $this->checkEligibility($mahasiswa);
         if (!$eligibility['allowed']) {
             return redirect()->back()->with('error', implode(' ', $eligibility['reasons']))->withInput();
@@ -430,7 +436,7 @@ class PengajuanController extends Controller
 
     public function cancel(PengajuanMagang $pengajuan)
     {
-        abort_unless($pengajuan->mahasiswa_id === auth()->user()->mahasiswaProfile?->id, 403);
+        abort_unless($this->idsMatch($pengajuan->mahasiswa_id, auth()->user()->mahasiswaProfile?->id), 403);
 
         if (!in_array($pengajuan->status_pengajuan, ['pending', 'revisi'], true)) {
             return redirect()->back()->with('error', 'Pengajuan tidak dapat dibatalkan karena sudah diproses admin.');
@@ -514,7 +520,7 @@ class PengajuanController extends Controller
 
     private function authorizeRevisiSuratPengantar(PengajuanMagang $pengajuan): void
     {
-        abort_unless($pengajuan->mahasiswa_id === auth()->user()->mahasiswaProfile?->id, 403);
+        abort_unless($this->idsMatch($pengajuan->mahasiswa_id, auth()->user()->mahasiswaProfile?->id), 403);
         abort_unless($pengajuan->jenis_pengajuan === 'surat_pengantar', 404);
         abort_unless($pengajuan->status_pengajuan === 'revisi', 403);
     }

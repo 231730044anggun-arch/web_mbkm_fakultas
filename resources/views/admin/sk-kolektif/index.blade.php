@@ -1,6 +1,6 @@
 @extends('layouts.app')
-@section('title', 'SK Magang Kolektif')
-@section('page-title', 'SK Magang Kolektif')
+@section('title', 'SK Magang')
+@section('page-title', 'SK Magang')
 
 @section('content')
 @if(session('success'))<div class="alert alert-success">{{ session('success') }}</div>@endif
@@ -15,17 +15,20 @@
 <div class="card p-4">
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
         <div>
-            <h6 class="fw-bold mb-1">Terbitkan SK Magang Kolektif</h6>
+            <h6 class="fw-bold mb-1">Upload SK Magang</h6>
             <div class="text-muted small">Satu file SK dapat diterbitkan ke banyak mahasiswa dan masuk ke menu Dokumen masing-masing.</div>
         </div>
-        <a href="{{ route('admin.dashboard') }}" class="btn btn-sm btn-outline-secondary">Kembali</a>
+        <div class="d-flex gap-2">
+            <a href="{{ route('admin.sk-kolektif.penempatan') }}" class="btn btn-sm btn-outline-primary">Import Penempatan Magang</a>
+            <a href="{{ route('admin.dashboard') }}" class="btn btn-sm btn-outline-secondary">Kembali</a>
+        </div>
     </div>
 
     <form action="{{ route('admin.sk-kolektif.store') }}" method="POST" enctype="multipart/form-data">
         @csrf
         <div class="row g-3">
             <div class="col-md-4">
-                <label class="form-label fw-semibold">File SK Magang Kolektif</label>
+                <label class="form-label fw-semibold">File SK Magang</label>
                 <input type="file" name="file_sk" class="form-control" accept=".pdf,.doc,.docx" required>
             </div>
             <div class="col-md-4">
@@ -70,7 +73,7 @@
                 </div>
             </div>
         </div>
-        <button class="btn btn-primary mt-3">Terbitkan SK Kolektif</button>
+        <button class="btn btn-primary mt-3">Terbitkan SK Magang</button>
     </form>
 </div>
 
@@ -81,38 +84,4 @@ document.getElementById('selectAllSk')?.addEventListener('change', function () {
 });
 </script>
 @endpush
-
-<div class="card p-4 mt-4">
-    <div class="mb-3">
-        <h6 class="fw-bold mb-1">Import Penugasan Dosen/Pembimbing/Mitra</h6>
-        <div class="text-muted small">Upload CSV dengan kolom nim, email_dosen/nidn_nip_dosen, nama_pembimbing_lapangan, email_pembimbing_lapangan, no_hp_pembimbing_lapangan, jabatan_pembimbing_lapangan, nama_mitra, kota_mitra.</div>
-    </div>
-    <form action="{{ route('admin.sk-kolektif.import-penugasan') }}" method="POST" enctype="multipart/form-data" class="row g-3">
-        @csrf
-        <div class="col-md-4">
-            <label class="form-label fw-semibold">File CSV Penugasan</label>
-            <input type="file" name="file_penugasan" class="form-control" accept=".csv,.txt" required>
-        </div>
-        <div class="col-md-3">
-            <label class="form-label fw-semibold">Periode</label>
-            <select name="periode_id" class="form-select">
-                <option value="">-- Pilih Periode --</option>
-                @foreach($periodes as $periode)
-                    <option value="{{ $periode->id }}">{{ $periode->nama_periode ?? $periode->nama }} {{ $periode->tahun ?? '' }}</option>
-                @endforeach
-            </select>
-        </div>
-        <div class="col-md-2">
-            <label class="form-label fw-semibold">Tanggal Mulai</label>
-            <input type="date" name="tanggal_mulai" class="form-control">
-        </div>
-        <div class="col-md-2">
-            <label class="form-label fw-semibold">Tanggal Selesai</label>
-            <input type="date" name="tanggal_selesai" class="form-control">
-        </div>
-        <div class="col-md-1 d-grid align-items-end">
-            <button class="btn btn-primary mt-md-4">Import</button>
-        </div>
-    </form>
-</div>
 @endsection

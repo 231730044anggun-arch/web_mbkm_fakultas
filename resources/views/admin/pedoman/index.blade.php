@@ -1,4 +1,4 @@
-﻿@extends('layouts.app')
+@extends('layouts.app')
 @section('title', 'Pedoman & SOP')
 @section('page-title', 'Pedoman & SOP')
 
@@ -19,7 +19,7 @@
         </thead>
         <tbody>
             @forelse($pedomans as $i => $p)
-            @php($hasFile = $p->file_path && \Illuminate\Support\Facades\Storage::disk('public')->exists($p->file_path))
+            @php($hasFile = (bool) $p->file_path)
             <tr>
                 <td>{{ $i + 1 }}</td>
                 <td>{{ $p->judul }}</td>

@@ -12,12 +12,23 @@
         <tr><th>Instansi</th><td>{{ $kelayakan->pengajuan->mitra->nama_instansi ?? '-' }}</td></tr>
         <tr><th>Periode</th><td>{{ $kelayakan->pengajuan->tanggal_mulai }} s/d {{ $kelayakan->pengajuan->tanggal_selesai }}</td></tr>
     </table>
+    @if($kelayakan->deadlineApprovalLabel())
+    <div class="rounded-3 border px-3 py-2 mt-3 mb-0 small" style="background:#f4efff;border-color:#ded2ff!important;color:#3b2678;">
+        Deadline pengumpulan: <strong>{{ $kelayakan->deadlineApprovalLabel() }}</strong>
+        @if($kelayakan->melewatiDeadline())
+            <span class="badge bg-danger ms-2">Terlambat</span>
+        @endif
+    </div>
+    @endif
     <h6 class="fw-bold mt-4">Bahan Kelayakan</h6>
     <p><strong>Uraian Output Magang:</strong><br>{{ $kelayakan->output_magang }}</p>
     <p><strong>Catatan Mahasiswa:</strong><br>{{ $kelayakan->catatan_mahasiswa ?: 'Tidak ada' }}</p>
     <a href="{{ route(str_starts_with(Route::currentRouteName(), 'dosen.') ? 'dosen.seminar.file' : 'pembimbing.seminar.file', [$kelayakan->id, 'laporan']) }}" target="_blank" class="btn btn-sm btn-outline-primary">Lihat Laporan</a>
     @if($kelayakan->produk_magang)
     <a href="{{ route(str_starts_with(Route::currentRouteName(), 'dosen.') ? 'dosen.seminar.file' : 'pembimbing.seminar.file', [$kelayakan->id, 'produk']) }}" target="_blank" class="btn btn-sm btn-outline-primary">Lihat Produk</a>
+    @endif
+    @if($kelayakan->draft_jurnal)
+    <a href="{{ route(str_starts_with(Route::currentRouteName(), 'dosen.') ? 'dosen.seminar.file' : 'pembimbing.seminar.file', [$kelayakan->id, 'jurnal']) }}" target="_blank" class="btn btn-sm btn-outline-primary">Lihat Draft Jurnal</a>
     @endif
 </div>
 <div class="card p-4">

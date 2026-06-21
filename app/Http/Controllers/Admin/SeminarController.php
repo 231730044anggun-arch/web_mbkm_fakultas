@@ -1,21 +1,30 @@
 <?php
 namespace App\Http\Controllers\Admin;
 
+use App\Http\Controllers\Concerns\HandlesSecurePublicFiles;
 use App\Http\Controllers\Controller;
 use App\Models\Dosen;
 use App\Models\Dokumen;
+use App\Models\KelayakanSeminar;
 use App\Models\Notifikasi;
+use App\Models\Penilaian;
 use App\Models\PengajuanMagang;
 use App\Models\StatusHistory;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 
 class SeminarController extends Controller
 {
+    use HandlesSecurePublicFiles;
     public function index()
     {
-        $pengajuans = PengajuanMagang::with(['mahasiswa.user', 'mitra', 'periode', 'bimbingans.dosen.user', 'pembimbingLapangan.user', 'kelayakanSeminar'])
-            ->whereNotNull('status_seminar')
-            ->whereIn('status_seminar', ['menunggu_jadwal', 'terjadwal', 'selesai', 'ditunda', 'dibatalkan'])
+        $pengajuans = PengajuanMagang::with(['mahasiswa.user', 'mitra', 'periode', 'bimbingans.dosen.user', 'pembimbingLapangan.user', 'kelayakanSeminar', 'penilaian'])
+            ->where(function ($query) {
+                $query->whereIn('status_seminar', ['menunggu_jadwal', 'terjadwal', 'selesai', 'ditunda', 'dibatalkan'])
+                    ->orWhereHas('kelayakanSeminar', fn($kelayakan) => $kelayakan
+                        ->where('status_persetujuan_dosen', 'disetujui')
+                        ->where('status_persetujuan_pembimbing', 'disetujui'));
+            })
             ->latest()
             ->paginate(15);
         $dosens = Dosen::orderBy('nama_dosen')->get();
@@ -35,6 +44,10 @@ class SeminarController extends Controller
         ]);
 
         $pengajuan = PengajuanMagang::with(['mahasiswa.user', 'bimbingans.dosen.user', 'pembimbingLapangan.user', 'kelayakanSeminar'])->findOrFail($id);
+        if (!$pengajuan->kelayakanSeminar?->isApproved()) {
+            return redirect()->back()->with('error', 'Seminar belum dapat dijadwalkan karena belum disetujui oleh dosen pembimbing dan pembimbing lapangan.');
+        }
+
         $pengajuan->update([
             'judul_laporan' => $request->judul_laporan,
             'seminar_tanggal' => $request->seminar_tanggal,
@@ -121,6 +134,11 @@ class SeminarController extends Controller
         return redirect()->back()->with('success', 'Status seminar berhasil diperbarui.');
     }
 
+    public function storeSeminarScore(Request $request, $id)
+    {
+        return redirect()->back()->with('error', 'Nilai seminar hasil magang diinput oleh Dosen Pembimbing dan Pembimbing Lapangan melalui menu Penilaian setelah status seminar selesai.');
+    }
+
     public function cancel(Request $request, $id)
     {
         $request->validate([
@@ -159,6 +177,17 @@ class SeminarController extends Controller
 
         return redirect()->back()->with('success', 'Seminar berhasil dibatalkan.');
     }
+
+    public function file(KelayakanSeminar $kelayakan, string $type)
+    {
+        $path = match ($type) {
+            'produk' => $kelayakan->produk_magang,
+            'jurnal' => $kelayakan->draft_jurnal,
+            default => $kelayakan->laporan_hasil_magang,
+        };
+        return $this->publicInlineResponse($path, basename($this->normalizePublicPath($path) ?: $path));
+    }
+
     private function generateSuratSeminar(PengajuanMagang $pengajuan): void
     {
         try {

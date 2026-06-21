@@ -1,6 +1,7 @@
 <?php
 namespace App\Http\Controllers\Mahasiswa;
 
+use App\Http\Controllers\Concerns\HandlesSecurePublicFiles;
 use App\Http\Controllers\Controller;
 use App\Models\AbsensiMagang;
 use App\Models\Notifikasi;
@@ -13,10 +14,12 @@ use Symfony\Component\HttpFoundation\ResponseHeaderBag;
 
 class AbsensiController extends Controller
 {
+    use HandlesSecurePublicFiles;
     public function index(Request $request)
     {
-        if (!config('mbkm.absensi_aktif')) {
-            return view('mahasiswa.info-butuh-pengajuan', ['feature' => 'Absensi Magang', 'message' => 'Fitur Absensi Magang sedang dinonaktifkan untuk periode ini.']);
+        $mahasiswa = auth()->user()->mahasiswaProfile;
+        if (!$mahasiswa?->absensiAktif()) {
+            return view('mahasiswa.info-butuh-pengajuan', ['feature' => 'Absensi Magang', 'message' => $mahasiswa?->isAbsensiNonaktif() ? 'Fitur Absensi Magang sedang dinonaktifkan untuk angkatan 2023.' : 'Fitur Absensi Magang sedang dinonaktifkan untuk periode ini.']);
         }
 
         $pengajuan = $this->activePengajuan();
@@ -41,8 +44,9 @@ class AbsensiController extends Controller
 
     public function store(Request $request)
     {
-        if (!config('mbkm.absensi_aktif')) {
-            return redirect()->route('mahasiswa.absensi.index')->with('error', 'Fitur Absensi Magang sedang dinonaktifkan untuk periode ini.');
+        $mahasiswa = auth()->user()->mahasiswaProfile;
+        if (!$mahasiswa?->absensiAktif()) {
+            return redirect()->route('mahasiswa.absensi.index')->with('error', $mahasiswa?->isAbsensiNonaktif() ? 'Fitur Absensi Magang sedang dinonaktifkan untuk angkatan 2023.' : 'Fitur Absensi Magang sedang dinonaktifkan untuk periode ini.');
         }
 
         $pengajuan = $this->activePengajuan();
@@ -80,7 +84,7 @@ class AbsensiController extends Controller
 
         if ($existing) {
             if ($existing->bukti_hadir) {
-                Storage::disk('public')->delete($existing->bukti_hadir);
+                $this->deletePublicFileIfExists($existing->bukti_hadir);
             }
 
             $existing->update([
@@ -140,11 +144,8 @@ class AbsensiController extends Controller
     public function preview(AbsensiMagang $absensi)
     {
         $pengajuan = $this->activeOrOwnedPengajuan($absensi->pengajuan_magang_id);
-        abort_unless($absensi->mahasiswa_id === auth()->user()->mahasiswaProfile?->id && $pengajuan, 403);
-        abort_if(!$absensi->bukti_hadir || !Storage::disk('public')->exists($absensi->bukti_hadir), 404);
-
-        $extension = pathinfo($absensi->bukti_hadir, PATHINFO_EXTENSION) ?: 'pdf';
-        return $this->inlineFile($absensi->bukti_hadir, 'Bukti Absensi ' . ($pengajuan->mahasiswa->nama_lengkap ?? 'Mahasiswa') . '.' . $extension);
+        abort_unless($pengajuan && $this->idsMatch($absensi->mahasiswa_id, auth()->user()->mahasiswaProfile?->id), 403);
+        $extension = pathinfo($this->normalizePublicPath($absensi->bukti_hadir) ?: $absensi->bukti_hadir, PATHINFO_EXTENSION) ?: 'pdf'; return $this->publicInlineResponse($absensi->bukti_hadir, 'Bukti Absensi ' . ($pengajuan->mahasiswa->nama_lengkap ?? 'Mahasiswa') . '.' . $extension);
     }
 
     private function activePengajuan(): ?PengajuanMagang

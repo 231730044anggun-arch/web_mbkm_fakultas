@@ -18,7 +18,12 @@
                     <td>{{ $laporan->mahasiswa->nim ?? '-' }}</td>
                     <td>{{ $laporan->mahasiswa->prodi->nama_prodi ?? '-' }}</td>
                     <td>{{ $laporan->lokasi_kukerta }}</td>
-                    <td><span class="badge bg-success">{{ $laporan->status }}</span></td>
+                    <td>
+                        <span class="badge bg-success">Diterima</span>
+                        @if($laporan->status === 'terlambat')
+                            <span class="badge bg-danger ms-1">Terlambat</span>
+                        @endif
+                    </td>
                     <td><a href="{{ route('dosen.laporan-kukerta.show', $laporan->id) }}" class="btn btn-sm btn-outline-primary">Detail</a></td>
                 </tr>
             @empty

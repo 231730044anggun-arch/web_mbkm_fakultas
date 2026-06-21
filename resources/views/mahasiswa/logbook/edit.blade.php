@@ -4,7 +4,7 @@
 
 @section('content')
 <div class="card p-4">
-    <h6 class="fw-bold mb-3">Edit Logbook</h6>
+    <h6 class="student-card-title mb-3">Edit Logbook</h6>
     <form action="{{ route('mahasiswa.logbook.update', $logbook->id) }}" method="POST" enctype="multipart/form-data">
         @csrf @method('PUT')
         <div class="row g-3">

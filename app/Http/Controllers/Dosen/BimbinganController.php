@@ -1,6 +1,7 @@
 <?php
 namespace App\Http\Controllers\Dosen;
 
+use App\Http\Controllers\Concerns\HandlesSecurePublicFiles;
 use App\Http\Controllers\Controller;
 use App\Models\Bimbingan;
 use App\Models\BimbinganFormal;
@@ -9,6 +10,7 @@ use Illuminate\Http\Request;
 
 class BimbinganController extends Controller
 {
+    use HandlesSecurePublicFiles;
     public function index()
     {
         $dosenId    = auth()->user()->dosen?->id;
@@ -41,22 +43,27 @@ class BimbinganController extends Controller
 
     public function formalShow(BimbinganFormal $bimbingan)
     {
-        abort_unless($bimbingan->dosen_id === auth()->user()->dosen?->id, 403);
+        abort_unless($this->idsMatch($bimbingan->dosen_id, auth()->user()->dosen?->id), 403);
         $bimbingan->load(['pengajuan.mahasiswa', 'pengajuan.mitra']);
         return view('dosen.bimbingan.formal-show', compact('bimbingan'));
     }
 
+    public function file(BimbinganFormal $bimbingan)
+    {
+        abort_unless($this->idsMatch($bimbingan->dosen_id, auth()->user()->dosen?->id), 403);
+
+        return $this->publicInlineResponse($bimbingan->lampiran, basename($this->normalizePublicPath($bimbingan->lampiran) ?: $bimbingan->lampiran));
+    }
     public function reply(Request $request, BimbinganFormal $bimbingan)
     {
-        abort_unless($bimbingan->dosen_id === auth()->user()->dosen?->id, 403);
+        abort_unless($this->idsMatch($bimbingan->dosen_id, auth()->user()->dosen?->id), 403);
         $request->validate([
             'balasan_dosen' => 'required|string|max:2000',
-            'status' => 'required|in:dibalas,selesai',
         ]);
 
         $bimbingan->update([
             'balasan_dosen' => $request->balasan_dosen,
-            'status' => $request->status,
+            'status' => 'selesai',
         ]);
 
         if ($bimbingan->mahasiswa?->user) {

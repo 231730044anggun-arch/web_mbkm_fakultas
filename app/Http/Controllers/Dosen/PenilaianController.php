@@ -1,21 +1,26 @@
 <?php
 namespace App\Http\Controllers\Dosen;
 
+use App\Http\Controllers\Concerns\HandlesSecurePublicFiles;
 use App\Http\Controllers\Controller;
 use App\Models\Bimbingan;
+use App\Models\Dokumen;
 use App\Models\Notifikasi;
 use App\Models\Penilaian;
 use App\Models\PengajuanMagang;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Storage;
 
 class PenilaianController extends Controller
 {
+    use HandlesSecurePublicFiles;
     public function index()
     {
         $dosenId = auth()->user()->dosen?->id;
         abort_unless($dosenId, 403);
 
-        $pengajuans = PengajuanMagang::with(['mahasiswa.prodi', 'mitra', 'periode', 'penilaian'])
+        $pengajuans = PengajuanMagang::with(['mahasiswa.prodi', 'mahasiswa.angkatanMaster', 'mitra', 'periode', 'penilaian', 'kelayakanSeminar', 'logbooks', 'bimbinganFormals'])
             ->where('jenis_pengajuan', 'surat_keterangan')
             ->whereIn('status_pengajuan', ['berjalan', 'selesai'])
             ->whereHas('bimbingans', fn($query) => $query->where('dosen_id', $dosenId))
@@ -29,33 +34,48 @@ class PenilaianController extends Controller
     {
         $pengajuan = $this->findPengajuanForDosen($pengajuanId);
         $penilaian = Penilaian::where('pengajuan_id', $pengajuanId)->first();
-        $canInput = $pengajuan->hasValidSeminar();
+        [$canInput, $lockMessage] = $this->inputStatus($pengajuan);
 
-        return view('dosen.penilaian.create', compact('pengajuan', 'penilaian', 'canInput'));
+        return view('dosen.penilaian.create', compact('pengajuan', 'penilaian', 'canInput', 'lockMessage'));
     }
 
     public function store(Request $request, $pengajuanId)
     {
         $pengajuan = $this->findPengajuanForDosen($pengajuanId);
 
-        if (!$pengajuan->hasValidSeminar()) {
+        [$canInput, $lockMessage] = $this->inputStatus($pengajuan);
+        if (!$canInput) {
             return redirect()->route('dosen.penilaian.create', $pengajuanId)
-                ->with('error', 'Penilaian belum dapat dilakukan karena mahasiswa belum mengajukan Seminar Magang.');
+                ->with('error', $lockMessage);
         }
 
         $request->validate($this->rules());
+        $existing = Penilaian::where('pengajuan_id', $pengajuanId)->first();
+        $filePenilaian = $existing?->file_penilaian_formal_dosen;
+        if ($request->hasFile('file_penilaian_formal')) {
+            if ($filePenilaian) $this->deletePublicFileIfExists($filePenilaian);
+            $filePenilaian = $request->file('file_penilaian_formal')->store('documents/penilaian/dosen', 'public');
+        }
+
+        $data = [
+            ...$this->stageOnePayload($request, 'dosen'),
+            'catatan_dosen' => $request->catatan_dosen,
+            'catatan' => $request->catatan_dosen,
+            'file_penilaian_formal_dosen' => $filePenilaian,
+        ];
+
+        if ($pengajuan->status_seminar === 'selesai') {
+            $data = [
+                ...$data,
+                ...$this->seminarPayload($request, $existing, 'dosen'),
+                'nama_penguji' => $request->nama_penguji ?: $existing?->nama_penguji,
+                'catatan_seminar' => $request->catatan_seminar ?: $existing?->catatan_seminar,
+            ];
+        }
 
         $penilaian = Penilaian::updateOrCreate(
             ['pengajuan_id' => $pengajuanId],
-            [
-                'dosen_kehadiran_disiplin' => $request->dosen_kehadiran_disiplin,
-                'dosen_kinerja_sikap' => $request->dosen_kinerja_sikap,
-                'dosen_logbook_kegiatan' => $request->dosen_logbook_kegiatan,
-                'dosen_luaran' => $request->dosen_luaran,
-                'dosen_laporan_akhir' => $request->dosen_laporan_akhir,
-                'catatan_dosen' => $request->catatan_dosen,
-                'catatan' => $request->catatan_dosen,
-            ]
+            $data
         );
 
         $penilaian->calculateFinalScore();
@@ -74,19 +94,67 @@ class PenilaianController extends Controller
             ]);
         }
 
+        if ($filePenilaian) {
+            Dokumen::updateOrCreate(
+                ['pengajuan_id' => $pengajuan->id, 'jenis_dokumen' => 'file_penilaian_formal_dosen'],
+                [
+                    'file_path' => $filePenilaian,
+                    'tanggal_upload' => now()->toDateString(),
+                    'status_verifikasi' => 'valid',
+                    'catatan' => 'File penilaian formal dosen pembimbing',
+                ]
+            );
+        }
+
         return redirect()->route('dosen.penilaian.index')->with('success', 'Nilai dosen pembimbing berhasil disimpan.');
+    }
+
+    public function file($pengajuanId)
+    {
+        $pengajuan = $this->findPengajuanForDosen($pengajuanId);
+        $path = $pengajuan->penilaian?->file_penilaian_formal_dosen;
+        return $this->publicInlineResponse($path, basename($this->normalizePublicPath($path) ?: $path));
     }
 
     private function rules(): array
     {
-        return [
-            'dosen_kehadiran_disiplin' => 'required|numeric|min:0|max:100',
-            'dosen_kinerja_sikap' => 'required|numeric|min:0|max:100',
-            'dosen_logbook_kegiatan' => 'required|numeric|min:0|max:100',
-            'dosen_luaran' => 'required|numeric|min:0|max:100',
-            'dosen_laporan_akhir' => 'required|numeric|min:0|max:100',
+        $rules = [
+            'file_penilaian_formal' => 'nullable|file|mimes:pdf|max:10240',
             'catatan_dosen' => 'nullable|string|max:1000',
+            'nama_penguji' => 'nullable|string|max:255',
+            'catatan_seminar' => 'nullable|string|max:1000',
         ];
+
+        foreach (array_keys(Penilaian::tahap1Fields('dosen')) as $field) {
+            $rules[$field] = 'required|numeric|min:0|max:100';
+        }
+
+        foreach (array_keys(Penilaian::laporanRubrik('dosen') + Penilaian::presentasiRubrik('dosen')) as $field) {
+            $rules[$field] = 'nullable|numeric|min:50|max:100';
+        }
+
+        return $rules;
+    }
+
+    private function stageOnePayload(Request $request, string $role): array
+    {
+        $payload = [];
+        foreach (array_keys(Penilaian::tahap1Fields($role)) as $field) {
+            $payload[$field] = $request->input($field);
+        }
+
+        return $payload;
+    }
+
+    private function seminarPayload(Request $request, ?Penilaian $existing, string $role): array
+    {
+        $payload = [];
+        foreach (array_keys(Penilaian::laporanRubrik($role) + Penilaian::presentasiRubrik($role)) as $field) {
+            $value = $request->input($field);
+            $payload[$field] = $value === null || $value === '' ? $existing?->{$field} : $value;
+        }
+
+        return $payload;
     }
 
     private function findPengajuanForDosen($pengajuanId): PengajuanMagang
@@ -99,6 +167,51 @@ class PenilaianController extends Controller
                 ->whereIn('status_pengajuan', ['berjalan', 'selesai']))
             ->exists(), 403);
 
-        return PengajuanMagang::with(['mahasiswa.prodi', 'mitra', 'periode', 'penilaian'])->findOrFail($pengajuanId);
+        return PengajuanMagang::with(['mahasiswa.prodi', 'mahasiswa.angkatanMaster', 'mitra', 'periode', 'penilaian', 'kelayakanSeminar', 'logbooks', 'bimbinganFormals'])->findOrFail($pengajuanId);
+    }
+
+    private function inputStatus(PengajuanMagang $pengajuan): array
+    {
+        if (!$pengajuan->mahasiswa?->isAngkatanKhususSkKolektif()) {
+            return [
+                $pengajuan->status_seminar === 'selesai',
+                'Penilaian belum dapat diproses karena mahasiswa belum menyelesaikan Seminar Magang.',
+            ];
+        }
+
+        if (!$pengajuan->penempatanLengkap()) {
+            return [false, 'Penilaian belum dapat dilakukan karena data penempatan magang belum lengkap.'];
+        }
+
+        $kelayakan = $pengajuan->kelayakanSeminar;
+        if (!$kelayakan || blank($kelayakan->laporan_hasil_magang) || blank($kelayakan->output_magang) || blank($kelayakan->produk_magang) || blank($kelayakan->draft_jurnal)) {
+            return [false, 'Penilaian belum dapat dilakukan karena mahasiswa belum mengirim Laporan Hasil Magang, Uraian Output Magang, Produk Magang, dan Draft Jurnal pada menu Seminar Magang.'];
+        }
+
+        if ($pengajuan->bimbinganFormals->isEmpty()) {
+            return [false, 'Penilaian belum dapat dilakukan karena mahasiswa belum memiliki minimal satu riwayat bimbingan.'];
+        }
+
+        $missingWeeks = $this->missingLogbookWeeks($pengajuan);
+        if ($missingWeeks) {
+            return [false, 'Penilaian belum dapat dilakukan karena logbook mingguan belum lengkap sampai 22 Juni 2026. Minggu yang belum ada entri: ' . implode(', ', $missingWeeks) . '.'];
+        }
+
+        return [true, ''];
+    }
+
+    private function missingLogbookWeeks(PengajuanMagang $pengajuan): array
+    {
+        $start = $pengajuan->tanggal_mulai ?: $pengajuan->mahasiswa?->defaultTanggalMulaiMagang();
+        $deadline = $pengajuan->mahasiswa?->deadlineLaporanMagang();
+        if (!$start || !$deadline) return [];
+
+        $filled = $pengajuan->logbooks->mapWithKeys(fn($logbook) => [Carbon::parse($logbook->tanggal)->startOfWeek()->toDateString() => true]);
+        $missing = [];
+        for ($cursor = Carbon::parse($start)->startOfWeek(); $cursor->lessThanOrEqualTo(Carbon::parse($deadline)); $cursor->addWeek()) {
+            if (!isset($filled[$cursor->toDateString()])) $missing[] = $cursor->toDateString();
+        }
+
+        return $missing;
     }
 }

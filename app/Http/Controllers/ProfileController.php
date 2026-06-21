@@ -7,7 +7,7 @@ use App\Models\Kelas;
 use App\Models\Mitra;
 use App\Models\Prodi;
 use Illuminate\Http\Request;
-use Illuminate\Validation\Rule;
+use Illuminate\Support\Facades\Hash;
 
 class ProfileController extends Controller
 {
@@ -51,7 +51,6 @@ class ProfileController extends Controller
         $user = auth()->user();
         $data = $request->validate([
             'name' => 'required|string|max:255',
-            'email' => ['required', 'email', 'max:255', Rule::unique('users')->ignore($user->id)],
             'no_hp' => 'nullable|string|max:50',
             'email_pribadi' => 'nullable|email|max:150',
             'alamat_lengkap' => 'nullable|string',
@@ -73,9 +72,18 @@ class ProfileController extends Controller
             'nama_pembimbing' => 'nullable|string|max:150',
             'jabatan' => 'nullable|string|max:150',
             'mitra_id' => 'nullable|exists:mitras,id',
+            'current_password' => 'nullable|required_with:password_baru|string',
+            'password_baru' => 'nullable|string|min:8|confirmed',
         ]);
 
-        $user->update(['name' => $data['name'], 'email' => $data['email']]);
+        if (filled($data['password_baru'] ?? null)) {
+            if (!Hash::check($data['current_password'] ?? '', $user->password)) {
+                return back()->withErrors(['current_password' => 'Password lama tidak sesuai.'])->withInput();
+            }
+            $user->update(['password' => Hash::make($data['password_baru'])]);
+        }
+
+        $user->update(['name' => $data['name']]);
 
         if ($user->role === 'mahasiswa' && $user->mahasiswaProfile) {
             $kelas = isset($data['kelas_id']) ? Kelas::find($data['kelas_id']) : null;

@@ -9,16 +9,21 @@
         @csrf
         @method('PUT')
         <div class="row g-3">
+            <div class="col-12"><div class="fw-bold mb-1" style="color:#2d1b69;">Data Akun</div></div>
             <div class="col-md-6"><label class="form-label fw-semibold">Nama Akun</label><input type="text" name="name" class="form-control" value="{{ old('name', $user->name) }}" required></div>
-            <div class="col-md-6"><label class="form-label fw-semibold">Email Akun</label><input type="email" name="email" class="form-control" value="{{ old('email', $user->email) }}" required></div>
+            <div class="col-md-6">
+                <label class="form-label fw-semibold">Email Akun</label>
+                <input type="email" class="form-control" value="{{ $user->email }}" readonly>
+                <small class="text-muted">Email login tidak dapat diubah melalui halaman profile. Silakan hubungi admin jika diperlukan perubahan email.</small>
+            </div>
 
             @if($user->role === 'mahasiswa' && $user->mahasiswaProfile)
                 @php($m = $user->mahasiswaProfile)
+                <div class="col-12"><hr class="my-1"><div class="fw-bold mb-1" style="color:#2d1b69;">Data Mahasiswa</div></div>
                 <div class="col-md-4"><label class="form-label fw-semibold">Kelas</label><select name="kelas_id" class="form-select"><option value="">-</option>@foreach($kelasOptions as $k)<option value="{{ $k->id }}" @selected(old('kelas_id', $m->kelas_id) == $k->id)>{{ $k->nama_kelas }}</option>@endforeach</select></div>
                 <div class="col-md-4"><label class="form-label fw-semibold">Jenis Kelamin</label><select name="jenis_kelamin" class="form-select"><option value="">-</option><option value="Laki-laki" @selected(old('jenis_kelamin', $m->jenis_kelamin) === 'Laki-laki')>Laki-laki</option><option value="Perempuan" @selected(old('jenis_kelamin', $m->jenis_kelamin) === 'Perempuan')>Perempuan</option></select></div>
                 <div class="col-md-4"><label class="form-label fw-semibold">Nomor HP</label><input type="text" name="no_hp" class="form-control" value="{{ old('no_hp', $m->no_hp) }}"></div>
-                <div class="col-md-6"><label class="form-label fw-semibold">Email Pribadi</label><input type="email" name="email_pribadi" class="form-control" value="{{ old('email_pribadi', $m->email) }}"></div>
-                <div class="col-md-6"><label class="form-label fw-semibold">Alamat Lengkap</label><input name="alamat_lengkap" class="form-control" value="{{ old('alamat_lengkap', $m->alamat_lengkap) }}"></div>
+                <div class="col-12"><label class="form-label fw-semibold">Alamat Lengkap</label><input name="alamat_lengkap" class="form-control" value="{{ old('alamat_lengkap', $m->alamat_lengkap) }}"></div>
                 <div class="col-md-4"><label class="form-label fw-semibold">Tempat Lahir</label><input name="tempat_lahir" class="form-control" value="{{ old('tempat_lahir', $m->tempat_lahir) }}"></div>
                 <div class="col-md-4"><label class="form-label fw-semibold">Tanggal Lahir</label><input type="date" name="tanggal_lahir" class="form-control" value="{{ old('tanggal_lahir', $m->tanggal_lahir) }}"></div>
                 <div class="col-md-4"><label class="form-label fw-semibold">Angkatan</label><select name="angkatan_id" class="form-select"><option value="">-</option>@foreach($angkatanOptions as $a)<option value="{{ $a->id }}" @selected(old('angkatan_id', $m->angkatan_id) == $a->id)>{{ $a->tahun }}</option>@endforeach</select></div>
@@ -47,6 +52,25 @@
                 <div class="col-md-6"><label class="form-label fw-semibold">Email Instansi</label><input type="email" name="email_pribadi" class="form-control" value="{{ old('email_pribadi', $user->mitraUser->mitra->email) }}"></div>
                 <div class="col-md-6"><label class="form-label fw-semibold">Nomor Telepon</label><input type="text" name="no_hp" class="form-control" value="{{ old('no_hp', $user->mitraUser->mitra->no_telp) }}"></div>
             @endif
+            <div class="col-12"><hr class="my-2"></div>
+            <div class="col-12">
+                <div class="fw-bold mb-2" style="color:#2d1b69;">Ubah Password</div>
+                <div class="text-muted small mb-2">Kosongkan bagian ini jika tidak ingin mengubah password.</div>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label fw-semibold">Password Lama</label>
+                <input type="password" name="current_password" class="form-control" autocomplete="current-password">
+                @error('current_password')<div class="text-danger small">{{ $message }}</div>@enderror
+            </div>
+            <div class="col-md-4">
+                <label class="form-label fw-semibold">Password Baru</label>
+                <input type="password" name="password_baru" class="form-control" autocomplete="new-password">
+                @error('password_baru')<div class="text-danger small">{{ $message }}</div>@enderror
+            </div>
+            <div class="col-md-4">
+                <label class="form-label fw-semibold">Konfirmasi Password Baru</label>
+                <input type="password" name="password_baru_confirmation" class="form-control" autocomplete="new-password">
+            </div>
             <div class="col-12"><button type="submit" class="btn btn-primary px-4">Simpan</button><a href="{{ route('profile.show') }}" class="btn btn-secondary px-4">Kembali</a></div>
         </div>
     </form>

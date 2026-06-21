@@ -1,6 +1,7 @@
 <?php
 namespace App\Http\Controllers\Admin;
 
+use App\Http\Controllers\Concerns\HandlesSecurePublicFiles;
 use App\Http\Controllers\Controller;
 use App\Models\Mitra;
 use Illuminate\Http\Request;
@@ -8,6 +9,7 @@ use Illuminate\Support\Facades\Storage;
 
 class MitraController extends Controller
 {
+    use HandlesSecurePublicFiles;
     public function index(Request $request)
     {
         $query = Mitra::query();
@@ -71,6 +73,10 @@ class MitraController extends Controller
         return redirect()->route('admin.mitra.index')->with('success', 'Mitra berhasil ditambahkan.');
     }
 
+    public function mou(Mitra $mitra)
+    {
+        return $this->publicInlineResponse($mitra->file_mou, 'MoU ' . ($mitra->nama_instansi ?? 'Mitra') . '.pdf');
+    }
     public function edit(Mitra $mitra)
     {
         return view('admin.mitra.edit', compact('mitra'));
@@ -92,7 +98,7 @@ class MitraController extends Controller
         $data = $request->except('file_mou');
         if ($request->hasFile('file_mou')) {
             if ($mitra->file_mou) {
-                Storage::disk('public')->delete($mitra->file_mou);
+                $this->deletePublicFileIfExists($mitra->file_mou);
             }
             $data['file_mou'] = $request->file('file_mou')->store('documents/mou', 'public');
         }
@@ -113,7 +119,7 @@ class MitraController extends Controller
         }
 
         if ($mitra->file_mou) {
-            Storage::disk('public')->delete($mitra->file_mou);
+            $this->deletePublicFileIfExists($mitra->file_mou);
         }
         $mitra->delete();
         return redirect()->route('admin.mitra.index')->with('success', 'Mitra berhasil dihapus.');

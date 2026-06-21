@@ -2,6 +2,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Carbon;
 
 class PengajuanMagang extends Model
 {
@@ -28,6 +29,7 @@ class PengajuanMagang extends Model
     public function logbooks() { return $this->hasMany(Logbook::class, 'pengajuan_id'); }
     public function absensis() { return $this->hasMany(AbsensiMagang::class, 'pengajuan_magang_id'); }
     public function penilaian() { return $this->hasOne(Penilaian::class, 'pengajuan_id'); }
+    public function kelayakanSeminar() { return $this->hasOne(KelayakanSeminar::class, 'pengajuan_id'); }
     public function statusHistories() { return $this->hasMany(StatusHistory::class, 'pengajuan_id'); }
     public function pembimbingLapangan() { return $this->belongsTo(PembimbingLapangan::class, 'pembimbing_lapangan_id'); }
     public function pembimbingLapanganLegacy() { return $this->hasOne(PembimbingLapangan::class, 'pengajuan_id'); }
@@ -40,5 +42,43 @@ class PengajuanMagang extends Model
     public function nilaiFinalLengkap(): bool
     {
         return $this->penilaian && $this->penilaian->isComplete();
+    }
+
+    public function isPenempatanKolektif(): bool
+    {
+        return $this->jenis_pengajuan === 'surat_keterangan'
+            && in_array($this->jenis_mitra, ['kolektif', 'penempatan_magang', 'sk_kolektif'], true);
+    }
+
+    public function penempatanLengkap(): bool
+    {
+        $hasTanggal = filled($this->tanggal_mulai) && filled($this->tanggal_selesai);
+        if (!$hasTanggal && ($this->mahasiswa?->isAngkatanKhususSkKolektif() ?? false)) {
+            $hasTanggal = filled($this->mahasiswa?->defaultTanggalMulaiMagang())
+                && filled($this->mahasiswa?->defaultTanggalSelesaiMagang());
+        }
+
+        return $this->bimbingans()->exists()
+            && filled($this->pembimbing_lapangan_id)
+            && filled($this->mitra_id)
+            && $hasTanggal;
+    }
+
+    public function seminarDateTime(): ?Carbon
+    {
+        if (blank($this->seminar_tanggal)) {
+            return null;
+        }
+
+        try {
+            return Carbon::parse($this->seminar_tanggal . ' ' . ($this->seminar_jam ?: '00:00'));
+        } catch (\Throwable $e) {
+            return null;
+        }
+    }
+
+    public function seminarSudahBerlangsung(): bool
+    {
+        return $this->seminarDateTime()?->lessThanOrEqualTo(now()) ?? false;
     }
 }

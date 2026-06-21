@@ -2,6 +2,8 @@
 namespace App\Http\Controllers\Admin\Concerns;
 
 use PhpOffice\PhpSpreadsheet\IOFactory;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 
 trait ImportsTabularData
 {
@@ -65,6 +67,25 @@ trait ImportsTabularData
             'nip' => 'nidn_nip',
             'namadosen' => 'nama_dosen',
             'statusdosen' => 'status_dosen',
+            'namainstansi' => 'nama_instansi',
+            'namamitra' => 'nama_instansi',
+            'instansi' => 'nama_instansi',
+            'tempatmagang' => 'nama_instansi',
+            'kotamitra' => 'kota_mitra',
+            'kota' => 'kota_mitra',
+            'namadosenpembimbing' => 'nama_dosen_pembimbing',
+            'emaildosenpembimbing' => 'email_dosen_pembimbing',
+            'emaildosen' => 'email_dosen_pembimbing',
+            'nidnnipdosen' => 'nidn_nip_dosen',
+            'namapembimbinglapangan' => 'nama_pembimbing_lapangan',
+            'emailpembimbinglapangan' => 'email_pembimbing_lapangan',
+            'nohppembimbinglapangan' => 'no_hp_pembimbing_lapangan',
+            'jabatanpembimbinglapangan' => 'jabatan_pembimbing_lapangan',
+            'periodemagang' => 'periode_magang',
+            'tanggalmulaimagang' => 'tanggal_mulai_magang',
+            'tanggalmulai' => 'tanggal_mulai_magang',
+            'tanggalselesaimagang' => 'tanggal_selesai_magang',
+            'tanggalselesai' => 'tanggal_selesai_magang',
         ];
 
         if (isset($aliases[$compact])) return $aliases[$compact];
@@ -82,5 +103,26 @@ trait ImportsTabularData
         };
 
         return response()->streamDownload($callback, $filename, ['Content-Type' => 'text/csv; charset=UTF-8']);
+    }
+
+    private function xlsxResponse(string $filename, array $headers, iterable $rows)
+    {
+        $callback = function () use ($headers, $rows) {
+            $spreadsheet = new Spreadsheet();
+            $sheet = $spreadsheet->getActiveSheet();
+            $sheet->fromArray($headers, null, 'A1');
+            $rowNumber = 2;
+            foreach ($rows as $row) {
+                $sheet->fromArray(array_values(is_array($row) ? $row : iterator_to_array($row)), null, 'A' . $rowNumber);
+                $rowNumber++;
+            }
+            $writer = new Xlsx($spreadsheet);
+            $writer->save('php://output');
+            $spreadsheet->disconnectWorksheets();
+        };
+
+        return response()->streamDownload($callback, $filename, [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        ]);
     }
 }

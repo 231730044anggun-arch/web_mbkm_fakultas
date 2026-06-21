@@ -1,6 +1,7 @@
 <?php
 namespace App\Http\Controllers\Admin;
 
+use App\Http\Controllers\Concerns\HandlesSecurePublicFiles;
 use App\Http\Controllers\Controller;
 use App\Models\PedomanSop;
 use Illuminate\Http\Request;
@@ -10,6 +11,7 @@ use Symfony\Component\HttpFoundation\ResponseHeaderBag;
 
 class PedomanController extends Controller
 {
+    use HandlesSecurePublicFiles;
     public function index()
     {
         $pedomans = PedomanSop::latest()->paginate(15);
@@ -23,16 +25,12 @@ class PedomanController extends Controller
 
     public function download(PedomanSop $pedoman)
     {
-        abort_if(!$pedoman->file_path || !Storage::disk('public')->exists($pedoman->file_path), 404);
-
-        return Storage::disk('public')->download($pedoman->file_path, $this->downloadName($pedoman));
+        return $this->publicDownloadResponse($pedoman->file_path, $this->downloadName($pedoman));
     }
 
     public function preview(PedomanSop $pedoman)
     {
-        abort_if(!$pedoman->file_path || !Storage::disk('public')->exists($pedoman->file_path), 404);
-
-        return $this->inlineFile($pedoman->file_path, $this->downloadName($pedoman));
+        return $this->publicInlineResponse($pedoman->file_path, $this->downloadName($pedoman));
     }
 
     public function create()
@@ -74,7 +72,7 @@ class PedomanController extends Controller
         $filePath = $pedoman->file_path;
         if ($request->hasFile('file')) {
             if ($filePath) {
-                Storage::disk('public')->delete($filePath);
+                $this->deletePublicFileIfExists($filePath);
             }
             $filePath = $request->file('file')->store('documents/pedoman', 'public');
         }
@@ -92,7 +90,7 @@ class PedomanController extends Controller
     public function destroy(PedomanSop $pedoman)
     {
         if ($pedoman->file_path) {
-            Storage::disk('public')->delete($pedoman->file_path);
+            $this->deletePublicFileIfExists($pedoman->file_path);
         }
         $pedoman->delete();
         return redirect()->route('admin.pedoman.index')->with('success', 'Pedoman berhasil dihapus.');

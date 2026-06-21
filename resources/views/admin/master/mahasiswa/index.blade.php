@@ -14,6 +14,7 @@
         <div class="d-flex flex-wrap gap-2">
             <a href="{{ route('admin.master.mahasiswa.create') }}" class="btn btn-primary">Tambah Manual</a>
             <a href="{{ route('admin.master.mahasiswa.template') }}" class="btn btn-outline-secondary">Template CSV</a>
+            <a href="{{ route('admin.master.mahasiswa.template-xlsx') }}" class="btn btn-outline-secondary">Template XLSX</a>
             <a href="{{ route('admin.master.mahasiswa.export') }}" class="btn btn-outline-success">Export CSV</a>
         </div>
     </div>
@@ -21,8 +22,8 @@
     <form action="{{ route('admin.master.mahasiswa.import') }}" method="POST" enctype="multipart/form-data" class="row g-2 mt-3">
         @csrf
         <div class="col-md-8">
-            <label class="form-label">Import CSV/Excel</label>
-            <input type="file" name="file" class="form-control" accept=".csv,.txt,.xlsx,.xls" required>
+            <label class="form-label">Import CSV/XLSX</label>
+            <input type="file" name="file" class="form-control" accept=".csv,.xlsx" required>
         </div>
         <div class="col-md-4 d-flex align-items-end">
             <button class="btn btn-outline-primary w-100">Import Data</button>

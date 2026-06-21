@@ -3,6 +3,7 @@
 @section('page-title', 'Form Pengajuan')
 
 @section('content')
+@php($angkatanKhusus = auth()->user()->mahasiswaProfile?->isAngkatanKhususSkKolektif() ?? false)
 @if(!empty($eligibility) && !$eligibility['allowed'])
 <div class="card p-4">
     <div class="alert alert-danger mb-0">
@@ -20,15 +21,20 @@
     <div class="col-md-4">
         <div class="card p-4 h-100">
             <h6 class="fw-bold mb-2">Surat Pengantar/Rekomendasi Magang</h6>
-            <p class="text-muted small">Untuk meminta surat dari fakultas sebelum dikirim ke instansi.</p>
-            <a href="{{ route('mahasiswa.pengajuan.create', ['jenis' => 'surat_pengantar']) }}" class="btn btn-primary mt-auto">Pilih</a>
+            @if($angkatanKhusus)
+                <p class="text-muted small">Pengajuan Surat Pengantar Magang sedang dinonaktifkan untuk angkatan 2023 karena alur menggunakan SK Magang kolektif dari admin.</p>
+                <button type="button" class="btn btn-secondary mt-auto" disabled>Dinonaktifkan</button>
+            @else
+                <p class="text-muted small">Untuk meminta surat dari fakultas sebelum dikirim ke instansi.</p>
+                <a href="{{ route('mahasiswa.pengajuan.create', ['jenis' => 'surat_pengantar']) }}" class="btn btn-primary mt-auto">Pilih</a>
+            @endif
         </div>
     </div>
     <div class="col-md-4">
         <div class="card p-4 h-100">
             <h6 class="fw-bold mb-2">SK Magang</h6>
-            @if(config('mbkm.mode_angkatan_berjalan'))
-                <p class="text-muted small">Pengajuan SK Magang sedang dinonaktifkan karena SK Magang diterbitkan secara kolektif oleh admin.</p>
+            @if($angkatanKhusus)
+                <p class="text-muted small">Pengajuan SK Magang sedang dinonaktifkan untuk angkatan 2023 karena SK Magang diterbitkan secara kolektif oleh admin.</p>
                 <button type="button" class="btn btn-secondary mt-auto" disabled>Dinonaktifkan</button>
             @else
                 <p class="text-muted small">Untuk mengupload bukti diterima instansi, proposal, dan meminta dokumen SK Magang.</p>
@@ -44,14 +50,19 @@
         </div>
     </div>
 </div>
-@elseif($jenisPengajuan === 'surat_keterangan' && config('mbkm.mode_angkatan_berjalan'))
+@elseif($jenisPengajuan === 'surat_pengantar' && $angkatanKhusus)
 <div class="card p-4">
-    <div class="alert alert-info mb-0">Pengajuan SK Magang sedang dinonaktifkan karena SK Magang diterbitkan secara kolektif oleh admin.</div>
+    <div class="alert alert-info mb-0">Pengajuan Surat Pengantar Magang sedang dinonaktifkan untuk angkatan 2023 karena alur menggunakan SK Magang kolektif dari admin.</div>
+    <a href="{{ route('mahasiswa.pengajuan.index') }}" class="btn btn-secondary mt-3">Kembali ke Pengajuan</a>
+</div>
+@elseif($jenisPengajuan === 'surat_keterangan' && $angkatanKhusus)
+<div class="card p-4">
+    <div class="alert alert-info mb-0">Pengajuan SK Magang sedang dinonaktifkan untuk angkatan 2023 karena SK Magang diterbitkan secara kolektif oleh admin.</div>
     <a href="{{ route('mahasiswa.pengajuan.index') }}" class="btn btn-secondary mt-3">Kembali ke Pengajuan</a>
 </div>
 @elseif($jenisPengajuan === 'surat_keterangan')
 <div class="card p-4">
-    <h6 class="fw-bold mb-3">Pengajuan SK Magang</h6>
+    <h6 class="student-card-title mb-3">Pengajuan SK Magang</h6>
     @if($pengajuanDisetujui->isEmpty())
         <div class="alert alert-warning mb-0">Belum ada Pengajuan Surat Pengantar/Rekomendasi Magang yang disetujui dan sudah terbit.</div>
     @else

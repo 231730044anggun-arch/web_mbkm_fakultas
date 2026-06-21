@@ -1,6 +1,7 @@
 <?php
 namespace App\Http\Controllers\Mahasiswa;
 
+use App\Http\Controllers\Concerns\HandlesSecurePublicFiles;
 use App\Http\Controllers\Controller;
 use App\Models\Dokumen;
 use App\Models\PengajuanMagang;
@@ -11,6 +12,7 @@ use Symfony\Component\HttpFoundation\ResponseHeaderBag;
 
 class DokumenController extends Controller
 {
+    use HandlesSecurePublicFiles;
     public function index($pengajuanId)
     {
         $pengajuan = $this->findOwnedPengajuan($pengajuanId);
@@ -23,7 +25,7 @@ class DokumenController extends Controller
         $this->findOwnedPengajuan($pengajuanId);
 
         $request->validate([
-            'jenis_dokumen' => 'required|in:surat_diterima,laporan',
+            'jenis_dokumen' => 'required|in:surat_diterima,proposal_magang',
             'file'          => 'required|file|mimes:pdf,doc,docx|max:5120',
         ]);
 
@@ -41,9 +43,6 @@ class DokumenController extends Controller
         if (in_array($request->jenis_dokumen, ['surat_permohonan', 'surat_diterima'])) {
             $pengajuan->update(['status_surat_pengantar' => 'pending']);
         }
-        if ($request->jenis_dokumen === 'laporan') {
-            $pengajuan->update(['status_laporan' => 'pending']);
-        }
 
         return redirect()->back()->with('success', 'Dokumen berhasil diupload.');
     }
@@ -51,17 +50,13 @@ class DokumenController extends Controller
     public function preview($dokumenId)
     {
         $dokumen = $this->findOwnedDokumen($dokumenId);
-        abort_if(!Storage::disk('public')->exists($dokumen->file_path), 404);
-
-        return $this->inlineFile($dokumen->file_path, $this->downloadName($dokumen));
+        return $this->publicInlineResponse($dokumen->file_path, $this->downloadName($dokumen));
     }
 
     public function download($dokumenId)
     {
         $dokumen = $this->findOwnedDokumen($dokumenId);
-        abort_if(!Storage::disk('public')->exists($dokumen->file_path), 404);
-
-        return Storage::disk('public')->download($dokumen->file_path, $this->downloadName($dokumen));
+        return $this->publicDownloadResponse($dokumen->file_path, $this->downloadName($dokumen));
     }
 
     public function update(Request $request, $dokumenId)
@@ -85,7 +80,7 @@ class DokumenController extends Controller
         ]);
 
         if ($oldPath) {
-            Storage::disk('public')->delete($oldPath);
+            $this->deletePublicFileIfExists($oldPath);
         }
 
         return redirect()->back()->with('success', 'Dokumen berhasil diganti.');
@@ -99,16 +94,13 @@ class DokumenController extends Controller
         }
 
         if ($dokumen->file_path) {
-            Storage::disk('public')->delete($dokumen->file_path);
+            $this->deletePublicFileIfExists($dokumen->file_path);
         }
 
         $pengajuan = $dokumen->pengajuan;
         $jenis = $dokumen->jenis_dokumen;
         $dokumen->delete();
 
-        if ($jenis === 'laporan') {
-            $pengajuan->update(['status_laporan' => 'belum_ada']);
-        }
         if ($jenis === 'surat_diterima') {
             $pengajuan->update(['status_surat_keterangan' => 'belum_ada']);
         }
@@ -129,7 +121,7 @@ class DokumenController extends Controller
 
     private function canStudentModify(Dokumen $dokumen): bool
     {
-        $studentDocs = ['surat_diterima', 'proposal_magang', 'laporan'];
+        $studentDocs = ['surat_diterima', 'proposal_magang'];
         if (!in_array($dokumen->jenis_dokumen, $studentDocs, true)) {
             return false;
         }
@@ -154,6 +146,9 @@ class DokumenController extends Controller
             'proposal_magang' => 'Proposal Magang',
             'surat_diterima' => 'Surat Balasan Diterima Instansi',
             'laporan' => 'Laporan Magang',
+            'laporan_hasil_magang' => 'Laporan Hasil Magang',
+            'produk_magang' => 'Produk Magang',
+            'laporan_kukerta' => 'Laporan Kukerta',
             'surat_seminar' => 'Surat Seminar Magang',
         ];
 

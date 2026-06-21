@@ -15,7 +15,7 @@ class NotifikasiController extends Controller
 
     public function read(Notifikasi $notifikasi)
     {
-        abort_unless($notifikasi->user_id === auth()->id(), 403);
+        abort_unless($this->idsMatch($notifikasi->user_id, auth()->id()), 403);
 
         $notifikasi->update(['status' => 'dibaca']);
 
@@ -30,7 +30,7 @@ class NotifikasiController extends Controller
     }
     public function destroy(Notifikasi $notifikasi)
     {
-        abort_unless($notifikasi->user_id === auth()->id(), 403);
+        abort_unless($this->idsMatch($notifikasi->user_id, auth()->id()), 403);
         $notifikasi->delete();
 
         return redirect()->route('notifikasi.index')->with('success', 'Notifikasi berhasil dihapus.');

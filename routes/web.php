@@ -38,6 +38,7 @@ use App\Http\Controllers\Mitra\PenilaianController as MitraPenilaian;
 use App\Http\Controllers\Mitra\LogbookController as MitraLogbook;
 use App\Http\Controllers\Pembimbing\DashboardController as PembimbingDashboard;
 use App\Http\Controllers\Pembimbing\MahasiswaController as PembimbingMahasiswa;
+use App\Http\Controllers\Pembimbing\BimbinganController as PembimbingBimbingan;
 use App\Http\Controllers\Pembimbing\AbsensiController as PembimbingAbsensi;
 use App\Http\Controllers\Pembimbing\LogbookController as PembimbingLogbook;
 use App\Http\Controllers\Pembimbing\PenilaianController as PembimbingPenilaian;
@@ -75,10 +76,12 @@ Route::prefix('admin')->middleware(['auth', 'role:admin,superadmin'])->name('adm
     Route::put('/master-data/referensi/{type}/{id}', [MasterDataController::class, 'updateReference'])->name('master.reference.update');
     Route::delete('/master-data/referensi/{type}/{id}', [MasterDataController::class, 'destroyReference'])->name('master.reference.destroy');
     Route::get('/master-data/mahasiswa/template', [MasterMahasiswaController::class, 'template'])->name('master.mahasiswa.template');
+    Route::get('/master-data/mahasiswa/template-xlsx', [MasterMahasiswaController::class, 'templateXlsx'])->name('master.mahasiswa.template-xlsx');
     Route::get('/master-data/mahasiswa/export', [MasterMahasiswaController::class, 'export'])->name('master.mahasiswa.export');
     Route::post('/master-data/mahasiswa/import', [MasterMahasiswaController::class, 'import'])->name('master.mahasiswa.import');
     Route::resource('/master-data/mahasiswa', MasterMahasiswaController::class)->names('master.mahasiswa');
     Route::get('/master-data/dosen/template', [MasterDosenController::class, 'template'])->name('master.dosen.template');
+    Route::get('/master-data/dosen/template-xlsx', [MasterDosenController::class, 'templateXlsx'])->name('master.dosen.template-xlsx');
     Route::get('/master-data/dosen/export', [MasterDosenController::class, 'export'])->name('master.dosen.export');
     Route::post('/master-data/dosen/import', [MasterDosenController::class, 'import'])->name('master.dosen.import');
     Route::resource('/master-data/dosen', MasterDosenController::class)->names('master.dosen');
@@ -93,7 +96,9 @@ Route::prefix('admin')->middleware(['auth', 'role:admin,superadmin'])->name('adm
     Route::delete('/dokumen/{dokumen}', [AdminPengajuan::class, 'destroyDokumen'])->name('dokumen.destroy');
     Route::post('/pengajuan/{id}/seminar', [AdminPengajuan::class, 'scheduleSeminar'])->name('pengajuan.seminar');
     Route::get('/seminar', [AdminSeminar::class, 'index'])->name('seminar.index');
+    Route::get('/seminar/kelayakan/{kelayakan}/{type}/file', [AdminSeminar::class, 'file'])->name('seminar.file');
     Route::post('/seminar/{id}/schedule', [AdminSeminar::class, 'schedule'])->name('seminar.schedule');
+    Route::post('/seminar/{id}/nilai-seminar', [AdminSeminar::class, 'storeSeminarScore'])->name('seminar.nilai-seminar');
     Route::post('/seminar/{id}/reject', [AdminSeminar::class, 'reject'])->name('seminar.reject');
     Route::post('/seminar/{id}/cancel', [AdminSeminar::class, 'cancel'])->name('seminar.cancel');
     Route::post('/pengajuan/{id}/dosen', [AdminPengajuan::class, 'assignDosen'])->name('pengajuan.dosen');
@@ -103,7 +108,11 @@ Route::prefix('admin')->middleware(['auth', 'role:admin,superadmin'])->name('adm
     Route::post('/surat/sk-kolektif', [\App\Http\Controllers\Admin\SuratController::class, 'generateSkKolektif'])->name('surat.sk.kolektif');
     Route::get('/sk-kolektif', [SkKolektifController::class, 'index'])->name('sk-kolektif.index');
     Route::post('/sk-kolektif', [SkKolektifController::class, 'store'])->name('sk-kolektif.store');
+    Route::get('/sk-kolektif/penempatan', [SkKolektifController::class, 'penempatan'])->name('sk-kolektif.penempatan');
+    Route::get('/sk-kolektif/template-penugasan', [SkKolektifController::class, 'templatePenugasan'])->name('sk-kolektif.template-penugasan');
+    Route::get('/sk-kolektif/template-penugasan-xlsx', [SkKolektifController::class, 'templatePenugasanXlsx'])->name('sk-kolektif.template-penugasan-xlsx');
     Route::post('/sk-kolektif/import-penugasan', [SkKolektifController::class, 'importPenugasan'])->name('sk-kolektif.import-penugasan');
+    Route::get('/mitra/{mitra}/mou', [MitraController::class, 'mou'])->name('mitra.mou');
     Route::resource('mitra', MitraController::class);
     Route::post('/periode/{periode}/activate', [PeriodeController::class, 'activate'])->name('periode.activate');
     Route::resource('periode', PeriodeController::class)->except(['show']);
@@ -128,6 +137,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/notifikasi/read-all', [NotifikasiController::class, 'readAll'])->name('notifikasi.read-all');
     Route::delete('/notifikasi/delete-all', [NotifikasiController::class, 'destroyAll'])->name('notifikasi.destroy-all');
     Route::delete('/notifikasi/{notifikasi}', [NotifikasiController::class, 'destroy'])->name('notifikasi.destroy');
+    Route::get('/logbook/{logbook}/bukti/preview', [\App\Http\Controllers\LogbookBuktiController::class, 'preview'])->name('logbook.bukti.preview');
 });
 
 // ============ MAHASISWA ============
@@ -171,6 +181,7 @@ Route::prefix('mahasiswa')->middleware(['auth', 'role:mahasiswa'])->name('mahasi
     Route::get('/surat', [MahasiswaPengajuan::class, 'needsActivePengajuan'])->defaults('feature', 'Surat/Download Surat')->name('surat.info');
     Route::get('/penilaian', [MahasiswaPengajuan::class, 'needsActivePengajuan'])->defaults('feature', 'Penilaian')->name('penilaian.info');
     Route::get('/penilaian/{pengajuanId}', [MahasiswaPenilaian::class, 'show'])->name('penilaian.show');
+    Route::get('/penilaian/{pengajuanId}/{type}/file', [MahasiswaPenilaian::class, 'file'])->name('penilaian.file');
     Route::get('/laporan-kukerta', [MahasiswaLaporanKukerta::class, 'index'])->name('laporan-kukerta.index');
     Route::post('/laporan-kukerta', [MahasiswaLaporanKukerta::class, 'store'])->name('laporan-kukerta.store');
     Route::get('/laporan-kukerta/{laporan}/{type}/{index?}', [MahasiswaLaporanKukerta::class, 'file'])->name('laporan-kukerta.file');
@@ -183,6 +194,7 @@ Route::prefix('dosen')->middleware(['auth', 'role:dosen'])->name('dosen.')->grou
     Route::get('/bimbingan/{pengajuanId}/detail', [DosenBimbingan::class, 'show'])->name('bimbingan.show');
     Route::get('/bimbingan/{pengajuanId}/formal', [DosenBimbingan::class, 'formalIndex'])->name('bimbingan.formal.index');
     Route::get('/bimbingan/formal/{bimbingan}', [DosenBimbingan::class, 'formalShow'])->name('bimbingan.formal.show');
+    Route::get('/bimbingan/formal/{bimbingan}/file', [DosenBimbingan::class, 'file'])->name('bimbingan.formal.file');
     Route::post('/bimbingan/formal/{bimbingan}/reply', [DosenBimbingan::class, 'reply'])->name('bimbingan.formal.reply');
     Route::get('/logbook', [DosenLogbook::class, 'index'])->name('logbook.index');
     Route::get('/logbook/{pengajuanId}', [DosenLogbook::class, 'show'])->name('logbook.show');
@@ -198,6 +210,7 @@ Route::prefix('dosen')->middleware(['auth', 'role:dosen'])->name('dosen.')->grou
     Route::get('/seminar/kelayakan/{kelayakan}/{type}/file', [DosenSeminar::class, 'file'])->name('seminar.file');
     Route::get('/penilaian', [DosenPenilaian::class, 'index'])->name('penilaian.index');
     Route::get('/penilaian/{pengajuanId}', [DosenPenilaian::class, 'create'])->name('penilaian.create');
+    Route::get('/penilaian/{pengajuanId}/file', [DosenPenilaian::class, 'file'])->name('penilaian.file');
     Route::post('/penilaian/{pengajuanId}', [DosenPenilaian::class, 'store'])->name('penilaian.store');
     Route::get('/laporan-kukerta', [DosenLaporanKukerta::class, 'index'])->name('laporan-kukerta.index');
     Route::get('/laporan-kukerta/{laporan}', [DosenLaporanKukerta::class, 'show'])->name('laporan-kukerta.show');
@@ -209,6 +222,11 @@ Route::prefix('pembimbing-lapangan')->middleware(['auth', 'role:pembimbing_lapan
     Route::get('/dashboard', [PembimbingDashboard::class, 'index'])->name('dashboard');
     Route::get('/mahasiswa', [PembimbingMahasiswa::class, 'index'])->name('mahasiswa.index');
     Route::get('/mahasiswa/{pengajuanId}', [PembimbingMahasiswa::class, 'show'])->name('mahasiswa.show');
+    Route::get('/bimbingan', [PembimbingBimbingan::class, 'index'])->name('bimbingan.index');
+    Route::get('/bimbingan/{pengajuanId}/formal', [PembimbingBimbingan::class, 'formalIndex'])->name('bimbingan.formal.index');
+    Route::get('/bimbingan/formal/{bimbingan}', [PembimbingBimbingan::class, 'formalShow'])->name('bimbingan.formal.show');
+    Route::get('/bimbingan/formal/{bimbingan}/file', [PembimbingBimbingan::class, 'file'])->name('bimbingan.formal.file');
+    Route::post('/bimbingan/formal/{bimbingan}/reply', [PembimbingBimbingan::class, 'reply'])->name('bimbingan.formal.reply');
     Route::get('/absensi', [PembimbingAbsensi::class, 'index'])->name('absensi.index');
     Route::post('/absensi/{absensi}/validasi', [PembimbingAbsensi::class, 'validasi'])->name('absensi.validasi');
     Route::get('/absensi/{absensi}/preview', [PembimbingAbsensi::class, 'preview'])->name('absensi.preview');
@@ -226,6 +244,7 @@ Route::prefix('pembimbing-lapangan')->middleware(['auth', 'role:pembimbing_lapan
     Route::get('/seminar/kelayakan/{kelayakan}/{type}/file', [PembimbingSeminar::class, 'file'])->name('seminar.file');
     Route::get('/penilaian', [PembimbingPenilaian::class, 'index'])->name('penilaian.index');
     Route::get('/penilaian/{pengajuanId}', [PembimbingPenilaian::class, 'create'])->name('penilaian.create');
+    Route::get('/penilaian/{pengajuanId}/file', [PembimbingPenilaian::class, 'file'])->name('penilaian.file');
     Route::post('/penilaian/{pengajuanId}', [PembimbingPenilaian::class, 'store'])->name('penilaian.store');
 });
 Route::prefix('mitra')->middleware(['auth', 'role:mitra'])->name('mitra.')->group(function () {

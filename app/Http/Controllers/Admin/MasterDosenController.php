@@ -72,6 +72,11 @@ class MasterDosenController extends Controller
         return $this->csvResponse('template_import_dosen.csv', $this->headers(), []);
     }
 
+    public function templateXlsx()
+    {
+        return $this->xlsxResponse('template_import_dosen.xlsx', $this->headers(), []);
+    }
+
     public function export()
     {
         $rows = Dosen::with('prodi')->orderBy('nama_dosen')->get()->map(fn($d) => [

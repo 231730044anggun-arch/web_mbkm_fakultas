@@ -19,8 +19,8 @@
             <td>File MoU</td>
             <td>
                 @if($mitra->file_mou)
-                    <a href="{{ asset('storage/'.$mitra->file_mou) }}" target="_blank" class="btn btn-sm btn-outline-primary">Lihat</a>
-                    <a href="{{ asset('storage/'.$mitra->file_mou) }}" download class="btn btn-sm btn-outline-success">Download</a>
+                    <a href="{{ route('admin.mitra.mou', $mitra->id) }}" target="_blank" class="btn btn-sm btn-outline-primary">Lihat</a>
+                    <a href="{{ route('admin.mitra.mou', $mitra->id) }}" download class="btn btn-sm btn-outline-success">Download</a>
                 @else
                     <span class="text-muted">Tidak ada file MoU</span>
                 @endif

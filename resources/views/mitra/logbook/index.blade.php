@@ -1,4 +1,4 @@
-﻿@extends('layouts.app')
+@extends('layouts.app')
 @section('title', 'Logbook Mahasiswa')
 @section('page-title', 'Logbook Mahasiswa')
 
@@ -78,7 +78,7 @@
                     </td>
                     <td>
                         @if($l->bukti_foto)
-                            <a href="{{ route('mitra.logbook.foto.preview', $l->id) }}" target="_blank" class="btn btn-sm btn-outline-secondary">Lihat</a>
+                            <a href="{{ route('logbook.bukti.preview', $l->id) }}" target="_blank" class="btn btn-sm btn-outline-secondary">Lihat</a>
                         @else
                             <span class="text-muted small">Belum ada</span>
                         @endif

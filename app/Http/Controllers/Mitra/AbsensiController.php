@@ -1,6 +1,7 @@
 <?php
 namespace App\Http\Controllers\Mitra;
 
+use App\Http\Controllers\Concerns\HandlesSecurePublicFiles;
 use App\Http\Controllers\Controller;
 use App\Models\AbsensiMagang;
 use App\Models\Notifikasi;
@@ -13,6 +14,7 @@ use Symfony\Component\HttpFoundation\ResponseHeaderBag;
 
 class AbsensiController extends Controller
 {
+    use HandlesSecurePublicFiles;
     public function index(Request $request)
     {
         $mitraId = auth()->user()->mitraUser?->mitra_id;
@@ -77,15 +79,12 @@ class AbsensiController extends Controller
     public function preview(AbsensiMagang $absensi)
     {
         $this->authorizeAbsensi($absensi);
-        abort_if(!$absensi->bukti_hadir || !Storage::disk('public')->exists($absensi->bukti_hadir), 404);
-
-        $extension = pathinfo($absensi->bukti_hadir, PATHINFO_EXTENSION) ?: 'pdf';
-        return $this->inlineFile($absensi->bukti_hadir, 'Bukti Absensi ' . ($absensi->mahasiswa->nama_lengkap ?? 'Mahasiswa') . '.' . $extension);
+        $extension = pathinfo($this->normalizePublicPath($absensi->bukti_hadir) ?: $absensi->bukti_hadir, PATHINFO_EXTENSION) ?: 'pdf'; return $this->publicInlineResponse($absensi->bukti_hadir, 'Bukti Absensi ' . ($absensi->mahasiswa->nama_lengkap ?? 'Mahasiswa') . '.' . $extension);
     }
 
     private function authorizeAbsensi(AbsensiMagang $absensi): void
     {
-        abort_unless($absensi->mitra_id === auth()->user()->mitraUser?->mitra_id, 403);
+        abort_unless($this->idsMatch($absensi->mitra_id, auth()->user()->mitraUser?->mitra_id), 403);
     }
 
     private function rekapAbsensi(PengajuanMagang $pengajuan): array

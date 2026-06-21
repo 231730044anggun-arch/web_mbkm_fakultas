@@ -2,6 +2,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Carbon;
 
 class MahasiswaProfile extends Model
 {
@@ -48,5 +49,79 @@ class MahasiswaProfile extends Model
             ->when($periodeId, fn($q) => $q->where('periode_id', $periodeId));
 
         return $query->exists();
+    }
+
+    public function tahunAngkatan(): ?string
+    {
+        $tahun = $this->angkatanMaster?->tahun ?: $this->angkatan;
+        return $tahun !== null && $tahun !== '' ? (string) $tahun : null;
+    }
+
+    public function isAngkatanKhususSkKolektif(): bool
+    {
+        $tahun = $this->tahunAngkatan();
+        if (!$tahun) return false;
+        return in_array($tahun, array_map('strval', config('mbkm.angkatan_khusus_sk_kolektif', [])), true);
+    }
+
+    public function isAbsensiNonaktif(): bool
+    {
+        $tahun = $this->tahunAngkatan();
+        if (!$tahun) return false;
+        return in_array($tahun, array_map('strval', config('mbkm.absensi_nonaktif_angkatan', [])), true);
+    }
+
+    public function absensiAktif(): bool
+    {
+        return (bool) config('mbkm.absensi_aktif', true) && !$this->isAbsensiNonaktif();
+    }
+
+    public function deadlineLaporanMagang(): ?Carbon
+    {
+        $tahun = $this->tahunAngkatan();
+        $deadline = $tahun ? (config('mbkm.deadline_laporan_magang_angkatan', [])[$tahun] ?? $this->periodeMagangKhusus()['deadline_administrasi'] ?? null) : null;
+        return $deadline ? Carbon::parse($deadline)->setTime(23, 59, 0) : null;
+    }
+
+    public function deadlineLaporanMagangLabel(): ?string
+    {
+        return $this->deadlineLaporanMagang()?->locale('id')->translatedFormat('d F Y \p\u\k\u\l H.i');
+    }
+
+    public function periodeMagangKhusus(): array
+    {
+        $tahun = $this->tahunAngkatan();
+        return $tahun ? (config('mbkm.periode_magang_angkatan', [])[$tahun] ?? []) : [];
+    }
+
+    public function defaultTanggalMulaiMagang(): ?string
+    {
+        return $this->periodeMagangKhusus()['tanggal_mulai'] ?? null;
+    }
+
+    public function defaultTanggalSelesaiMagang(): ?string
+    {
+        return $this->periodeMagangKhusus()['tanggal_selesai'] ?? null;
+    }
+
+    public function hasPenempatanMagangLengkap(?PengajuanMagang $pengajuan = null): bool
+    {
+        $pengajuan ??= $this->pengajuanMagangAktif();
+
+        return $pengajuan
+            && $pengajuan->bimbingans()->exists()
+            && filled($pengajuan->pembimbing_lapangan_id)
+            && filled($pengajuan->mitra_id)
+            && filled($pengajuan->tanggal_mulai)
+            && filled($pengajuan->tanggal_selesai);
+    }
+
+    public function pengajuanMagangAktif(): ?PengajuanMagang
+    {
+        return $this->pengajuans()
+            ->where('jenis_pengajuan', 'surat_keterangan')
+            ->whereIn('status_pengajuan', ['berjalan', 'selesai'])
+            ->latest('updated_at')
+            ->first();
     }
 }

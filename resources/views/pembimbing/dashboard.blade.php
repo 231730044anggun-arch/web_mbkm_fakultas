@@ -16,19 +16,21 @@
     </div>
     <div class="table-responsive">
         <table class="table table-hover align-middle">
-            <thead class="table-light"><tr><th>Nama</th><th>NIM</th><th>Program Studi</th><th>Mitra/Instansi</th><th>Status</th><th>Aksi</th></tr></thead>
+            <thead class="table-light"><tr><th class="align-top">Nama</th><th class="align-top">NIM</th><th class="align-top">Program Studi</th><th class="align-top">Dosen Pembimbing</th><th class="align-top">Mitra/Instansi</th><th class="align-top">Tanggal Magang</th><th class="align-top">Status</th><th class="align-top">Aksi</th></tr></thead>
             <tbody>
                 @forelse($pengajuans as $p)
                     <tr>
-                        <td>{{ $p->mahasiswa->nama_lengkap ?? '-' }}</td>
-                        <td>{{ $p->mahasiswa->nim ?? '-' }}</td>
-                        <td>{{ $p->mahasiswa->prodi->nama_prodi ?? '-' }}</td>
-                        <td>{{ $p->mitra->nama_instansi ?? '-' }}</td>
-                        <td><span class="badge bg-{{ $p->status_pengajuan === 'berjalan' ? 'success' : 'secondary' }}">{{ $p->status_pengajuan === 'berjalan' ? 'Aktif' : 'Selesai' }}</span></td>
-                        <td><a href="{{ route('pembimbing.mahasiswa.show', $p->id) }}" class="btn btn-sm btn-outline-primary">Detail</a></td>
+                        <td class="align-top">{{ $p->mahasiswa->nama_lengkap ?? '-' }}</td>
+                        <td class="align-top">{{ $p->mahasiswa->nim ?? '-' }}</td>
+                        <td class="align-top">{{ $p->mahasiswa->prodi->nama_prodi ?? '-' }}</td>
+                        <td class="align-top">{{ $p->bimbingans->first()?->dosen?->nama_dosen ?? '-' }}</td>
+                        <td class="align-top">{{ $p->mitra->nama_instansi ?? '-' }}</td>
+                        <td class="align-top">{{ $p->tanggal_mulai ?? '-' }} s/d {{ $p->tanggal_selesai ?? '-' }}</td>
+                        <td class="align-top"><span class="badge bg-{{ $p->status_pengajuan === 'berjalan' ? 'success' : 'secondary' }}">{{ $p->status_pengajuan === 'berjalan' ? 'Aktif' : 'Selesai' }}</span></td>
+                        <td class="align-top"><a href="{{ route('pembimbing.mahasiswa.show', $p->id) }}" class="btn btn-sm btn-outline-primary">Detail</a></td>
                     </tr>
                 @empty
-                    <tr><td colspan="6" class="text-center text-muted py-4">Belum ada mahasiswa bimbingan.</td></tr>
+                    <tr><td colspan="8" class="text-center text-muted py-4">Belum ada mahasiswa bimbingan.</td></tr>
                 @endforelse
             </tbody>
         </table>

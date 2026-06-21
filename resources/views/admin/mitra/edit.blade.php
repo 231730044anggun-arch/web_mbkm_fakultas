@@ -67,7 +67,7 @@
                 <input type="file" name="file_mou" class="form-control" accept=".pdf">
                 @if($mitra->file_mou)
                     <small class="text-muted d-block mt-1">File lama tetap dipakai jika tidak upload file baru.</small>
-                    <a href="{{ asset('storage/'.$mitra->file_mou) }}" target="_blank" class="btn btn-sm btn-outline-primary mt-2">Lihat File MoU Saat Ini</a>
+                    <a href="{{ route('admin.mitra.mou', $mitra->id) }}" target="_blank" class="btn btn-sm btn-outline-primary mt-2">Lihat File MoU Saat Ini</a>
                 @endif
             </div>
             <div class="col-12">

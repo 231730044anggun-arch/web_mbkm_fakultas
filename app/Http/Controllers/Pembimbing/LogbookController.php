@@ -1,6 +1,7 @@
 <?php
 namespace App\Http\Controllers\Pembimbing;
 
+use App\Http\Controllers\Concerns\HandlesSecurePublicFiles;
 use App\Http\Controllers\Controller;
 use App\Models\Logbook;
 use App\Models\Notifikasi;
@@ -13,16 +14,31 @@ use Symfony\Component\HttpFoundation\ResponseHeaderBag;
 
 class LogbookController extends Controller
 {
+    use HandlesSecurePublicFiles;
     public function index(Request $request)
     {
-        $query = $this->logbookQueryForPembimbing();
-        $this->applyFilters($query, $request);
+        $pembimbingId = auth()->user()->pembimbingLapangan?->id;
+        abort_unless($pembimbingId, 403);
 
-        $logbooks = $query->orderBy('tanggal', 'desc')->paginate(15)->withQueryString();
+        $pengajuans = PengajuanMagang::with(['mahasiswa.prodi', 'mitra', 'periode'])
+            ->withCount([
+                'logbooks',
+                'logbooks as logbooks_disetujui_count' => fn($query) => $query
+                    ->where('status_dosen', 'disetujui')
+                    ->where('status_mitra', 'disetujui'),
+            ])
+            ->where('pembimbing_lapangan_id', $pembimbingId)
+            ->where('jenis_pengajuan', 'surat_keterangan')
+            ->whereIn('status_pengajuan', ['berjalan', 'selesai'])
+            ->latest('updated_at')
+            ->paginate(15)
+            ->withQueryString();
+
         $pengajuan = null;
+        $logbooks = collect();
         $missing = [];
 
-        return view('pembimbing.logbook.index', compact('pengajuan', 'logbooks', 'missing'));
+        return view('pembimbing.logbook.index', compact('pengajuan', 'pengajuans', 'logbooks', 'missing'));
     }
 
     public function show(Request $request, $pengajuanId)
@@ -71,11 +87,8 @@ class LogbookController extends Controller
     public function previewFoto(Logbook $logbook)
     {
         $pengajuan = $this->findPengajuanForPembimbing($logbook->pengajuan_id);
-        abort_unless($logbook->pengajuan_id === $pengajuan->id, 403);
-        abort_if(!$logbook->bukti_foto || !Storage::disk('public')->exists($logbook->bukti_foto), 404);
-
-        $extension = pathinfo($logbook->bukti_foto, PATHINFO_EXTENSION) ?: 'jpg';
-        return $this->inlineFile($logbook->bukti_foto, 'Bukti Logbook ' . ($pengajuan->mahasiswa->nama_lengkap ?? 'Mahasiswa') . '.' . $extension);
+        abort_unless($this->idsMatch($logbook->pengajuan_id, $pengajuan->id), 403);
+        $extension = pathinfo($this->normalizePublicPath($logbook->bukti_foto) ?: $logbook->bukti_foto, PATHINFO_EXTENSION) ?: 'jpg'; return $this->publicInlineResponse($logbook->bukti_foto, 'Bukti Logbook ' . ($pengajuan->mahasiswa->nama_lengkap ?? 'Mahasiswa') . '.' . $extension);
     }
 
     private function logbookQueryForPembimbing()
