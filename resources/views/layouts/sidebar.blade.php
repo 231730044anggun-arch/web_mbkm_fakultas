@@ -1,17 +1,17 @@
-@php 
-    $role = auth()->user()->role; 
+@php
+    $role = auth()->user()->activeRole();
 @endphp
 
 {{-- ================= ADMIN & SUPERADMIN ================= --}}
 @if(in_array($role, ['admin', 'superadmin']))
 
-    <a href="{{ route('admin.dashboard') }}" 
+    <a href="{{ route('admin.dashboard') }}"
        class="nav-link {{ request()->is('admin/dashboard') ? 'active' : '' }}">
         <i class="bi bi-speedometer2 me-2"></i>
         Dashboard
     </a>
 
-    <a href="{{ route('admin.users.index') }}" 
+    <a href="{{ route('admin.users.index') }}"
        class="nav-link {{ request()->is('admin/users*') ? 'active' : '' }}">
         <i class="bi bi-people me-2"></i>
         Manajemen User
@@ -23,7 +23,7 @@
         Master Data
     </a>
 
-    <a href="{{ route('admin.pengajuan.index') }}" 
+    <a href="{{ route('admin.pengajuan.index') }}"
        class="nav-link {{ request()->is('admin/pengajuan*') ? 'active' : '' }}">
         <i class="bi bi-file-text me-2"></i>
         Pengajuan
@@ -35,25 +35,25 @@
         Seminar Magang
     </a>
 
-    <a href="{{ route('admin.mitra.index') }}" 
+    <a href="{{ route('admin.mitra.index') }}"
        class="nav-link {{ request()->is('admin/mitra*') ? 'active' : '' }}">
         <i class="bi bi-building me-2"></i>
         Data Mitra
     </a>
 
-    <a href="{{ route('admin.periode.index') }}" 
+    <a href="{{ route('admin.periode.index') }}"
        class="nav-link {{ request()->is('admin/periode*') ? 'active' : '' }}">
         <i class="bi bi-calendar me-2"></i>
         Periode
     </a>
 
-    <a href="{{ route('admin.pedoman.index') }}" 
+    <a href="{{ route('admin.pedoman.index') }}"
        class="nav-link {{ request()->is('admin/pedoman*') ? 'active' : '' }}">
         <i class="bi bi-book me-2"></i>
         Pedoman & SOP
     </a>
 
-    <a href="{{ route('admin.laporan.index') }}" 
+    <a href="{{ route('admin.laporan.index') }}"
        class="nav-link {{ request()->is('admin/laporan*') ? 'active' : '' }}">
         <i class="bi bi-bar-chart me-2"></i>
         Laporan
@@ -65,7 +65,7 @@
         SK Magang
     </a>
 
-    <a href="{{ route('profile.show') }}" 
+    <a href="{{ route('profile.show') }}"
        class="nav-link {{ request()->is('profile*') ? 'active' : '' }}">
         <i class="bi bi-person me-2"></i>
         Profile
@@ -74,13 +74,13 @@
 {{-- ================= MAHASISWA ================= --}}
 @elseif($role === 'mahasiswa')
 
-    <a href="{{ route('mahasiswa.dashboard') }}" 
+    <a href="{{ route('mahasiswa.dashboard') }}"
        class="nav-link {{ request()->is('mahasiswa/dashboard') ? 'active' : '' }}">
         <i class="bi bi-speedometer2 me-2"></i>
         Dashboard
     </a>
 
-    <a href="{{ route('mahasiswa.pengajuan.index') }}" 
+    <a href="{{ route('mahasiswa.pengajuan.index') }}"
        class="nav-link {{ request()->is('mahasiswa/pengajuan*') ? 'active' : '' }}">
         <i class="bi bi-send me-2"></i>
         Pengajuan
@@ -104,13 +104,13 @@
 
     @if($pengajuanAktif)
 
-        <a href="{{ route('mahasiswa.dokumen.index', $pengajuanAktif->id) }}" 
+        <a href="{{ route('mahasiswa.dokumen.index', $pengajuanAktif->id) }}"
            class="nav-link {{ request()->is('mahasiswa/dokumen*') ? 'active' : '' }}">
             <i class="bi bi-file-earmark-arrow-up me-2"></i>
             Dokumen
         </a>
 
-        <a href="{{ route('mahasiswa.logbook.index', $pengajuanAktif->id) }}" 
+        <a href="{{ route('mahasiswa.logbook.index', $pengajuanAktif->id) }}"
            class="nav-link {{ request()->is('mahasiswa/logbook*') ? 'active' : '' }}">
             <i class="bi bi-journal-text me-2"></i>
             Logbook
@@ -130,7 +130,7 @@
             Bimbingan
         </a>
 
-        <a href="{{ route('mahasiswa.penilaian.show', $pengajuanAktif->id) }}" 
+        <a href="{{ route('mahasiswa.penilaian.show', $pengajuanAktif->id) }}"
            class="nav-link {{ request()->is('mahasiswa/penilaian*') ? 'active' : '' }}">
             <i class="bi bi-star me-2"></i>
             Nilai
@@ -172,7 +172,7 @@
 
     @endif
 
-    <a href="{{ route('mahasiswa.seminar.index') }}" 
+    <a href="{{ route('mahasiswa.seminar.index') }}"
        class="nav-link {{ request()->is('mahasiswa/seminar*') ? 'active' : '' }}">
         <i class="bi bi-calendar-check me-2"></i>
         Seminar Magang
@@ -184,7 +184,7 @@
         Laporan Kukerta
     </a>
 
-    <a href="{{ route('pedoman.index') }}" 
+    <a href="{{ route('pedoman.index') }}"
        class="nav-link {{ request()->is('pedoman*') ? 'active' : '' }}">
         <i class="bi bi-book me-2"></i>
         Pedoman & SOP
@@ -198,13 +198,13 @@
 {{-- ================= DOSEN ================= --}}
 @elseif($role === 'dosen')
 
-    <a href="{{ route('dosen.dashboard') }}" 
+    <a href="{{ route('dosen.dashboard') }}"
        class="nav-link {{ request()->is('dosen/dashboard') ? 'active' : '' }}">
         <i class="bi bi-speedometer2 me-2"></i>
         Dashboard
     </a>
 
-    <a href="{{ route('dosen.bimbingan.index') }}" 
+    <a href="{{ route('dosen.bimbingan.index') }}"
        class="nav-link {{ request()->is('dosen/bimbingan*') ? 'active' : '' }}">
         <i class="bi bi-mortarboard me-2"></i>
         Bimbingan
@@ -234,13 +234,13 @@
         Penilaian
     </a>
 
-    <a href="{{ route('profile.show') }}" 
+    <a href="{{ route('profile.show') }}"
        class="nav-link {{ request()->is('profile*') ? 'active' : '' }}">
         <i class="bi bi-person me-2"></i>
         Profile
     </a>
 
-    <a href="{{ route('pedoman.index') }}" 
+    <a href="{{ route('pedoman.index') }}"
        class="nav-link {{ request()->is('pedoman*') ? 'active' : '' }}">
         <i class="bi bi-book me-2"></i>
         Pedoman & SOP
@@ -300,13 +300,13 @@
 {{-- ================= MITRA ================= --}}
 @elseif($role === 'mitra')
 
-    <a href="{{ route('mitra.dashboard') }}" 
+    <a href="{{ route('mitra.dashboard') }}"
        class="nav-link {{ request()->is('mitra/dashboard') ? 'active' : '' }}">
         <i class="bi bi-speedometer2 me-2"></i>
         Dashboard
     </a>
 
-    <a href="{{ route('mitra.pengajuan.index') }}" 
+    <a href="{{ route('mitra.pengajuan.index') }}"
        class="nav-link {{ request()->is('mitra/pengajuan*') ? 'active' : '' }}">
         <i class="bi bi-people me-2"></i>
         Mahasiswa Magang
@@ -336,17 +336,16 @@
         Penilaian Lapangan
     </a>
 
-    <a href="{{ route('pedoman.index') }}" 
+    <a href="{{ route('pedoman.index') }}"
        class="nav-link {{ request()->is('pedoman*') ? 'active' : '' }}">
         <i class="bi bi-book me-2"></i>
         Pedoman & SOP
     </a>
 
-    <a href="{{ route('profile.show') }}" 
+    <a href="{{ route('profile.show') }}"
        class="nav-link {{ request()->is('profile*') ? 'active' : '' }}">
         <i class="bi bi-person me-2"></i>
         Profile
     </a>
 
 @endif
-

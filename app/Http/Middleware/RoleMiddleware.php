@@ -20,8 +20,15 @@ class RoleMiddleware
             return redirect()->route('login')->withErrors(['email' => 'Akun Anda nonaktif. Silakan hubungi admin.']);
         }
 
-        if (!in_array(auth()->user()->role, $roles)) {
+        $user = auth()->user();
+        $matchedRole = collect($roles)->first(fn($role) => $user->hasRoleAccess($role));
+
+        if (!$matchedRole) {
             abort(403, 'Akses ditolak.');
+        }
+
+        if (!in_array($user->activeRole(), $roles, true)) {
+            $request->session()->put('active_role', $matchedRole);
         }
 
         return $next($request);

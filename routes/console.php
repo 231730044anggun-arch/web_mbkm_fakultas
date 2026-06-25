@@ -8,3 +8,4 @@ Artisan::command('inspire', function () {
 })->purpose('Display an inspiring quote');
 
 app(\Illuminate\Contracts\Console\Kernel::class)->registerCommand(app(\App\Console\Commands\ClearDemoData::class));
+app(\Illuminate\Contracts\Console\Kernel::class)->registerCommand(app(\App\Console\Commands\SyncPembimbingLapangan::class));

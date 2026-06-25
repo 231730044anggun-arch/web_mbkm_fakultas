@@ -46,6 +46,7 @@ use App\Http\Controllers\Pembimbing\SeminarController as PembimbingSeminar;
 use App\Http\Controllers\Mitra\AbsensiController as MitraAbsensi;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\NotifikasiController;
+use Illuminate\Http\Request;
 
 // ============ AUTH ============
 Route::get('/', fn() => redirect()->route('login'));
@@ -55,7 +56,7 @@ Route::post('/logout', [LoginController::class, 'logout'])->name('logout');
 
 // ============ DASHBOARD REDIRECT ============
 Route::get('/dashboard', function () {
-    $role = auth()->user()->role;
+    $role = auth()->user()->activeRole();
     return match($role) {
         'superadmin', 'admin' => redirect()->route('admin.dashboard'),
         'mahasiswa'           => redirect()->route('mahasiswa.dashboard'),
@@ -65,6 +66,17 @@ Route::get('/dashboard', function () {
         default               => redirect('/'),
     };
 })->middleware('auth')->name('dashboard');
+
+Route::post('/mode/switch', function (Request $request) {
+    $user = auth()->user();
+    $role = $request->input('role');
+
+    abort_unless($role && $user->hasRoleAccess($role), 403, 'Mode tidak tersedia untuk akun ini.');
+
+    $request->session()->put('active_role', $role);
+
+    return redirect()->route('dashboard')->with('success', 'Mode aktif diubah menjadi ' . $user->roleLabel($role) . '.');
+})->middleware('auth')->name('mode.switch');
 
 // ============ ADMIN ============
 Route::prefix('admin')->middleware(['auth', 'role:admin,superadmin'])->name('admin.')->group(function () {
@@ -184,6 +196,7 @@ Route::prefix('mahasiswa')->middleware(['auth', 'role:mahasiswa'])->name('mahasi
     Route::get('/penilaian/{pengajuanId}/{type}/file', [MahasiswaPenilaian::class, 'file'])->name('penilaian.file');
     Route::get('/laporan-kukerta', [MahasiswaLaporanKukerta::class, 'index'])->name('laporan-kukerta.index');
     Route::post('/laporan-kukerta', [MahasiswaLaporanKukerta::class, 'store'])->name('laporan-kukerta.store');
+    Route::put('/laporan-kukerta/{laporan}', [MahasiswaLaporanKukerta::class, 'update'])->name('laporan-kukerta.update');
     Route::get('/laporan-kukerta/{laporan}/{type}/{index?}', [MahasiswaLaporanKukerta::class, 'file'])->name('laporan-kukerta.file');
 });
 

@@ -28,8 +28,11 @@
             @endif
         </div>
     @endif
-    <form action="{{ route('mahasiswa.laporan-kukerta.store') }}" method="POST" enctype="multipart/form-data">
+    <form action="{{ $laporan ? route('mahasiswa.laporan-kukerta.update', $laporan) : route('mahasiswa.laporan-kukerta.store') }}" method="POST" enctype="multipart/form-data">
         @csrf
+        @if($laporan)
+            @method('PUT')
+        @endif
         <div class="row g-3">
             <div class="col-md-6">
                 <label class="form-label fw-semibold">Lokasi/Tempat Kukerta</label>
@@ -49,8 +52,8 @@
             </div>
             <div class="col-md-6">
                 <label class="form-label fw-semibold">Foto Dokumentasi Kegiatan Kukerta {{ $laporan && count($laporan->foto_dokumentasi_kukerta ?? []) ? '(kosongkan jika tidak diganti)' : '' }}</label>
-                <input type="file" name="foto_dokumentasi_kukerta[]" class="form-control" accept=".jpg,.jpeg,.png,.webp" multiple {{ $laporan && count($laporan->foto_dokumentasi_kukerta ?? []) ? '' : 'required' }}>
-                <small class="text-muted">Bisa upload lebih dari satu foto. Format: JPG, JPEG, PNG, WEBP.</small>
+                <input type="file" name="foto_dokumentasi_kukerta[]" class="form-control" accept=".jpg,.jpeg,.png,.webp,.pdf,.zip" multiple {{ $laporan && count($laporan->foto_dokumentasi_kukerta ?? []) ? '' : 'required' }}>
+                <small class="text-muted">Bisa upload lebih dari satu file. File baru akan ditambahkan tanpa menghapus dokumentasi lama.</small>
             </div>
             <div class="col-md-6">
                 <label class="form-label fw-semibold">Output Kukerta File <span class="text-muted small">(opsional)</span></label>
@@ -65,7 +68,7 @@
                 <textarea name="target_kukerta" class="form-control" rows="3" required>{{ old('target_kukerta', $laporan->target_kukerta ?? '') }}</textarea>
             </div>
         </div>
-        <button class="btn btn-primary mt-3">{{ $laporan ? 'Perbarui Laporan' : 'Kirim Laporan' }}</button>
+        <button type="submit" class="btn btn-primary mt-3">{{ $laporan ? 'Perbarui Laporan' : 'Kirim Laporan' }}</button>
     </form>
 </div>
 

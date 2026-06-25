@@ -8,7 +8,15 @@
     @php($summary = session('import_summary'))
     <div class="card p-4 mb-3 border-success">
         <h6 class="fw-bold mb-3">Ringkasan Import Penempatan</h6>
-        <p class="mb-3">Mahasiswa berhasil diproses: <strong>{{ $summary['processed'] ?? 0 }}</strong></p>
+        <div class="row g-2 mb-3">
+            <div class="col-md-3"><div class="border rounded p-2 h-100"><div class="text-muted small">Mahasiswa berhasil diproses</div><div class="fw-bold">{{ $summary['processed'] ?? 0 }}</div></div></div>
+            <div class="col-md-3"><div class="border rounded p-2 h-100"><div class="text-muted small">Dosen berhasil ditautkan</div><div class="fw-bold">{{ $summary['dosen_linked'] ?? 0 }}</div></div></div>
+            <div class="col-md-3"><div class="border rounded p-2 h-100"><div class="text-muted small">Dosen belum ditemukan</div><div class="fw-bold">{{ $summary['dosen_missing'] ?? 0 }}</div></div></div>
+            <div class="col-md-3"><div class="border rounded p-2 h-100"><div class="text-muted small">Baris gagal</div><div class="fw-bold">{{ $summary['failed'] ?? 0 }}</div></div></div>
+            <div class="col-md-4"><div class="border rounded p-2 h-100"><div class="text-muted small">Pembimbing Lapangan berhasil ditautkan</div><div class="fw-bold">{{ $summary['pembimbing_linked'] ?? 0 }}</div></div></div>
+            <div class="col-md-4"><div class="border rounded p-2 h-100"><div class="text-muted small">Akun Pembimbing Lapangan baru dibuat</div><div class="fw-bold">{{ $summary['pembimbing_new_accounts'] ?? 0 }}</div></div></div>
+            <div class="col-md-4"><div class="border rounded p-2 h-100"><div class="text-muted small">Akun Pembimbing Lapangan sudah ada</div><div class="fw-bold">{{ $summary['pembimbing_existing_accounts'] ?? 0 }}</div></div></div>
+        </div>
         <div class="row g-3">
             <div class="col-md-6">
                 <div class="fw-semibold mb-2">Dosen baru dibuat</div>

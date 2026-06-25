@@ -11,6 +11,8 @@ use App\Models\StatusHistory;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use PDF;
 
@@ -39,58 +41,107 @@ class SeminarController extends Controller
     public function storeKelayakan(Request $request, $pengajuanId)
     {
         $pengajuan = $this->findOwnedPengajuan($pengajuanId);
+
         $request->validate([
-            'laporan_hasil_magang' => 'required|file|mimes:pdf|max:10240',
+            'judul_laporan' => 'required|string|max:255',
+            'laporan_hasil_magang' => 'required|file|mimes:pdf|max:51200',
             'output_magang' => 'required|string|min:20',
-            'produk_magang' => 'required|file|mimes:pdf,zip,rar,doc,docx,xls,xlsx,ppt,pptx,jpg,jpeg,png|max:20480',
+            'produk_magang' => 'required|file|mimes:pdf,zip,rar,doc,docx,xls,xlsx,ppt,pptx,jpg,jpeg,png|max:102400',
             'draft_jurnal' => 'required|file|mimes:pdf,doc,docx|max:10240',
             'catatan_mahasiswa' => 'nullable|string|max:1000',
+        ], [
+            'judul_laporan.required' => 'Judul laporan magang wajib diisi.',
+            'laporan_hasil_magang.required' => 'Laporan Hasil Magang Final wajib diunggah.',
+            'laporan_hasil_magang.mimes' => 'Laporan Hasil Magang Final harus berupa PDF.',
+            'laporan_hasil_magang.max' => 'Ukuran Laporan Hasil Magang maksimal 50 MB.',
+            'output_magang.required' => 'Uraian Output Magang wajib diisi.',
+            'produk_magang.required' => 'Produk Magang wajib diunggah.',
+            'produk_magang.max' => 'Ukuran file Produk Magang maksimal 100 MB.',
+            'produk_magang.mimes' => 'Format Produk Magang harus PDF, ZIP, RAR, DOC/DOCX, XLS/XLSX, PPT/PPTX, JPG, JPEG, atau PNG.',
+            'draft_jurnal.required' => 'Draft Jurnal wajib diunggah.',
+            'draft_jurnal.mimes' => 'Draft Jurnal harus berupa PDF, DOC, atau DOCX.',
         ]);
 
-        $dosenId = $pengajuan->bimbingans->first()?->dosen_id;
+        $dosenId = $pengajuan->bimbingans->firstWhere('dosen_id')?->dosen_id;
+        $pembimbingLapanganId = $pengajuan->pembimbing_lapangan_id;
+
+        if (!$dosenId || !$pembimbingLapanganId) {
+            return back()
+                ->withInput()
+                ->with('error', 'Kelayakan seminar belum dapat dikirim karena data Dosen Pembimbing atau Pembimbing Lapangan belum terhubung. Silakan hubungi admin.');
+        }
+
         $old = $pengajuan->kelayakanSeminar;
-        $laporanPath = $request->file('laporan_hasil_magang')->store('documents/kelayakan-seminar/laporan', 'public');
-        $produkPath = $request->file('produk_magang')->store('documents/kelayakan-seminar/produk', 'public');
-        $draftJurnalPath = $request->file('draft_jurnal')->store('documents/kelayakan-seminar/draft-jurnal', 'public');
+        $newPaths = [];
+        $oldPaths = [];
 
-        if ($old) {
-            if ($old->laporan_hasil_magang) $this->deletePublicFileIfExists($old->laporan_hasil_magang);
-            if ($old->produk_magang) $this->deletePublicFileIfExists($old->produk_magang);
-            if ($old->draft_jurnal) $this->deletePublicFileIfExists($old->draft_jurnal);
-        }
+        try {
+            $newPaths['laporan'] = $request->file('laporan_hasil_magang')->store('documents/kelayakan-seminar/laporan', 'public');
+            $newPaths['produk'] = $request->file('produk_magang')->store('documents/kelayakan-seminar/produk', 'public');
+            $newPaths['jurnal'] = $request->file('draft_jurnal')->store('documents/kelayakan-seminar/draft-jurnal', 'public');
 
-        $kelayakan = KelayakanSeminar::updateOrCreate(
-            ['pengajuan_id' => $pengajuan->id],
-            [
+            if ($old) {
+                $oldPaths = array_filter([$old->laporan_hasil_magang, $old->produk_magang, $old->draft_jurnal]);
+            }
+
+            $kelayakan = DB::transaction(function () use ($pengajuan, $request, $dosenId, $pembimbingLapanganId, $newPaths) {
+                $pengajuan->update([
+                    'judul_laporan' => $request->judul_laporan,
+                ]);
+
+                $kelayakan = KelayakanSeminar::updateOrCreate(
+                    ['pengajuan_id' => $pengajuan->id],
+                    [
+                        'mahasiswa_id' => $pengajuan->mahasiswa_id,
+                        'dosen_id' => $dosenId,
+                        'pembimbing_lapangan_id' => $pembimbingLapanganId,
+                        'laporan_hasil_magang' => $newPaths['laporan'],
+                        'output_magang' => $request->output_magang,
+                        'produk_magang' => $newPaths['produk'],
+                        'draft_jurnal' => $newPaths['jurnal'],
+                        'catatan_mahasiswa' => $request->catatan_mahasiswa,
+                        'status' => 'menunggu_persetujuan',
+                        'status_persetujuan_dosen' => 'menunggu',
+                        'catatan_dosen' => null,
+                        'tanggal_persetujuan_dosen' => null,
+                        'status_persetujuan_pembimbing' => 'menunggu',
+                        'catatan_pembimbing' => null,
+                        'tanggal_persetujuan_pembimbing' => null,
+                    ]
+                );
+
+                $this->syncDokumenArsip($pengajuan->id, 'laporan_hasil_magang', $newPaths['laporan'], 'Laporan Hasil Magang dari Kelayakan Seminar');
+                $this->syncDokumenArsip($pengajuan->id, 'produk_magang', $newPaths['produk'], 'Produk Magang dari Kelayakan Seminar');
+                $this->syncDokumenArsip($pengajuan->id, 'draft_jurnal', $newPaths['jurnal'], 'Draft Jurnal dari Kelayakan Seminar');
+
+                return $kelayakan->fresh(['pengajuan.mahasiswa', 'dosen.user', 'pembimbingLapangan.user']);
+            });
+
+            foreach ($oldPaths as $oldPath) {
+                $this->deletePublicFileIfExists($oldPath);
+            }
+
+            $this->sendKelayakanNotifications($kelayakan);
+
+            return redirect()
+                ->route('mahasiswa.seminar.index')
+                ->with('success', 'Bahan kelayakan seminar berhasil dikirim dan menunggu persetujuan dosen pembimbing serta pembimbing lapangan.');
+        } catch (\Throwable $e) {
+            foreach ($newPaths as $path) {
+                $this->deletePublicFileIfExists($path);
+            }
+
+            Log::error('Gagal menyimpan kelayakan seminar', [
+                'pengajuan_id' => $pengajuan->id,
                 'mahasiswa_id' => $pengajuan->mahasiswa_id,
-                'dosen_id' => $dosenId,
-                'pembimbing_lapangan_id' => $pengajuan->pembimbing_lapangan_id,
-                'laporan_hasil_magang' => $laporanPath,
-                'output_magang' => $request->output_magang,
-                'produk_magang' => $produkPath,
-                'draft_jurnal' => $draftJurnalPath,
-                'catatan_mahasiswa' => $request->catatan_mahasiswa,
-                'status_persetujuan_dosen' => 'menunggu',
-                'catatan_dosen' => null,
-                'tanggal_persetujuan_dosen' => null,
-                'status_persetujuan_pembimbing' => 'menunggu',
-                'catatan_pembimbing' => null,
-                'tanggal_persetujuan_pembimbing' => null,
-            ]
-        );
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
 
-        $this->syncDokumenArsip($pengajuan->id, 'laporan_hasil_magang', $laporanPath, 'Laporan Hasil Magang dari Kelayakan Seminar');
-        $this->syncDokumenArsip($pengajuan->id, 'produk_magang', $produkPath, 'Produk Magang dari Kelayakan Seminar');
-        $this->syncDokumenArsip($pengajuan->id, 'draft_jurnal', $draftJurnalPath, 'Draft Jurnal dari Kelayakan Seminar');
-
-        if ($pengajuan->bimbingans->first()?->dosen?->user) {
-            $this->notify($pengajuan->bimbingans->first()->dosen->user->id, 'Kelayakan Seminar Baru', 'Mahasiswa ' . ($pengajuan->mahasiswa->nama_lengkap ?? '-') . ' mengirim bahan kelayakan seminar.', route('dosen.seminar.show', $kelayakan->id));
+            return back()
+                ->withInput()
+                ->with('error', 'Bahan kelayakan seminar belum dapat dikirim. Silakan periksa data dan file yang diunggah, lalu coba lagi.');
         }
-        if ($pengajuan->pembimbingLapangan?->user) {
-            $this->notify($pengajuan->pembimbingLapangan->user->id, 'Kelayakan Seminar Baru', 'Mahasiswa ' . ($pengajuan->mahasiswa->nama_lengkap ?? '-') . ' mengirim bahan kelayakan seminar.', route('pembimbing.seminar.show', $kelayakan->id));
-        }
-
-        return redirect()->route('mahasiswa.seminar.index')->with('success', 'Bahan kelayakan seminar berhasil dikirim. Tunggu persetujuan dosen pembimbing dan pembimbing lapangan.');
     }
 
     public function store(Request $request)
@@ -98,8 +149,10 @@ class SeminarController extends Controller
         $request->validate([
             'pengajuan_id' => 'required|exists:pengajuan_magangs,id',
             'judul_laporan' => 'required|string|max:255',
-            'laporan_seminar' => 'required|file|mimes:pdf|max:10240',
+            'laporan_seminar' => 'required|file|mimes:pdf|max:51200',
             'catatan' => 'nullable|string|max:500',
+        ], [
+            'laporan_seminar.max' => 'Ukuran Laporan Seminar maksimal 50 MB.',
         ]);
 
         $pengajuan = $this->findOwnedPengajuan($request->pengajuan_id);
@@ -224,6 +277,35 @@ class SeminarController extends Controller
         return $missing;
     }
 
+    private function sendKelayakanNotifications(KelayakanSeminar $kelayakan): void
+    {
+        try {
+            $namaMahasiswa = $kelayakan->pengajuan?->mahasiswa?->nama_lengkap ?? 'Mahasiswa';
+
+            if ($kelayakan->dosen?->user) {
+                $this->notify(
+                    $kelayakan->dosen->user->id,
+                    'Kelayakan Seminar Baru',
+                    'Mahasiswa ' . $namaMahasiswa . ' mengirim bahan kelayakan seminar.',
+                    route('dosen.seminar.show', $kelayakan->id)
+                );
+            }
+
+            if ($kelayakan->pembimbingLapangan?->user) {
+                $this->notify(
+                    $kelayakan->pembimbingLapangan->user->id,
+                    'Kelayakan Seminar Baru',
+                    'Mahasiswa ' . $namaMahasiswa . ' mengirim bahan kelayakan seminar.',
+                    route('pembimbing.seminar.show', $kelayakan->id)
+                );
+            }
+        } catch (\Throwable $e) {
+            Log::warning('Notifikasi kelayakan seminar gagal dikirim', [
+                'kelayakan_id' => $kelayakan->id,
+                'message' => $e->getMessage(),
+            ]);
+        }
+    }
     private function notify($userId, $judul, $pesan, $targetUrl): void
     {
         Notifikasi::create(['user_id' => $userId, 'judul' => $judul, 'pesan' => $pesan, 'status' => 'belum', 'target_url' => $targetUrl]);

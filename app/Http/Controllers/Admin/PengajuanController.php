@@ -409,7 +409,7 @@ class PengajuanController extends Controller
 
         $password = '12345678';
         $user = User::where('email', $email)->first();
-        if ($user && $user->role !== 'pembimbing_lapangan') {
+        if ($user && !$user->hasRoleAccess('pembimbing_lapangan') && $user->role !== 'dosen') {
             return ['message' => 'Email Pembimbing Lapangan sudah digunakan oleh role lain. Silakan admin cek email: ' . $email . '.'];
         }
 
@@ -423,7 +423,7 @@ class PengajuanController extends Controller
                 'status' => 'aktif',
             ]);
             $createdUser = true;
-        } else {
+        } elseif ($user->role === 'pembimbing_lapangan') {
             $user->update(['name' => $nama, 'status' => 'aktif']);
         }
 
@@ -454,17 +454,19 @@ class PengajuanController extends Controller
         ]);
 
         $emailMessage = '';
-        try {
-            Mail::to($email)->send(new PembimbingLapanganAccountMail($pembimbing, $pengajuan, $password));
-            $pembimbing->update(['email_akses_terkirim' => true, 'last_email_sent_at' => now()]);
-            $emailMessage = ' Email akses berhasil dikirim.';
-        } catch (\Throwable $e) {
-            $emailMessage = ' Akun dibuat/terhubung, tetapi email akses gagal dikirim. Cek konfigurasi MAIL di .env.';
+        if ($createdUser) {
+            try {
+                Mail::to($email)->send(new PembimbingLapanganAccountMail($pembimbing, $pengajuan, $password));
+                $pembimbing->update(['email_akses_terkirim' => true, 'last_email_sent_at' => now()]);
+                $emailMessage = ' Email akses berhasil dikirim.';
+            } catch (\Throwable $e) {
+                $emailMessage = ' Akun dibuat, tetapi email akses gagal dikirim. Cek konfigurasi MAIL di .env.';
+            }
         }
 
         return [
             'pembimbing' => $pembimbing,
-            'message' => ($createdUser ? 'Akun Pembimbing Lapangan berhasil dibuat: ' : 'Akun Pembimbing Lapangan berhasil dihubungkan: ') . $email . ' dengan password awal 12345678.' . $emailMessage,
+            'message' => ($createdUser ? 'Akun Pembimbing Lapangan berhasil dibuat: ' . $email . ' dengan password awal 12345678.' : 'Akun Pembimbing Lapangan berhasil dihubungkan ke akun yang sudah ada: ' . $email . '.') . $emailMessage,
         ];
     }
     private function activateMitraAfterAcceptance(PengajuanMagang $pengajuan): void

@@ -1,4 +1,4 @@
-﻿@extends('layouts.app')
+@extends('layouts.app')
 @section('title', 'Penilaian')
 @section('page-title', 'Penilaian Akademik')
 
@@ -80,13 +80,16 @@
                     <td class="align-top">{{ $pengajuan->mahasiswa->prodi->nama_prodi ?? '-' }}</td>
                     <td class="align-top">{{ $pengajuan->mitra->nama_instansi ?? $pengajuan->nama_instansi_manual ?? '-' }}</td>
                     <td class="align-top">
-                        @if($pengajuan->penilaian?->nilai_akhir !== null)
-                            <span class="badge bg-success assessment-badge">Final</span>
-                        @elseif($pengajuan->penilaian?->nilai_sementara !== null)
-                            <span class="badge bg-warning text-dark assessment-badge">Sementara</span>
-                        @else
-                            <span class="badge bg-secondary assessment-badge">Belum Lengkap</span>
-                        @endif
+                        @php
+                            $nilaiStatus = $pengajuan->penilaian?->status_nilai ?? 'belum_lengkap';
+                            $nilaiBadge = match ($nilaiStatus) {
+                                'final' => 'success',
+                                'akhir_saat_ini' => 'info text-dark',
+                                'sementara' => 'warning text-dark',
+                                default => 'secondary',
+                            };
+                        @endphp
+                        <span class="badge bg-{{ $nilaiBadge }} assessment-badge">{{ $pengajuan->penilaian?->statusNilaiLabel() ?? 'Nilai Belum Lengkap' }}</span>
                     </td>
                     <td class="align-top">{{ $pengajuan->penilaian?->nilai_sementara !== null ? number_format($pengajuan->penilaian->nilai_sementara, 2) : '-' }}</td>
                     <td class="align-top">

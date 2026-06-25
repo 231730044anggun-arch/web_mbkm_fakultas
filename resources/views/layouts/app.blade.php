@@ -718,7 +718,10 @@
 </head>
 <body>
 @php
-    $unreadNotifications = auth()->user()->notifikasis()->where('status', 'belum')->count();
+    $user = auth()->user();
+    $unreadNotifications = $user->notifikasis()->where('status', 'belum')->count();
+    $activeRole = $user->activeRole();
+    $availableRoles = $user->availableRoles();
 @endphp
 
 <!-- SIDEBAR -->
@@ -734,10 +737,10 @@
     </div>
 
     <a href="{{ route('profile.show') }}" class="sidebar-user text-decoration-none">
-        <div class="user-avatar">{{ strtoupper(substr(auth()->user()->name, 0, 1)) }}</div>
+        <div class="user-avatar">{{ strtoupper(substr($user->name, 0, 1)) }}</div>
         <div class="user-info">
-            <div class="user-name">{{ auth()->user()->name }}</div>
-            <div class="user-role">{{ auth()->user()->role }}</div>
+            <div class="user-name">{{ $user->name }}</div>
+            <div class="user-role">{{ $user->roleLabel($activeRole) }}</div>
         </div>
     </a>
 
@@ -783,10 +786,33 @@
             </a>
             <div class="dropdown">
                 <button class="topbar-user border-0 dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                    <span class="topbar-avatar">{{ strtoupper(substr(auth()->user()->name, 0, 1)) }}</span>
-                    <span class="topbar-name">{{ auth()->user()->name }}</span>
+                    <span class="topbar-avatar">{{ strtoupper(substr($user->name, 0, 1)) }}</span>
+                    <span class="topbar-name">{{ $user->name }}</span>
                 </button>
                 <ul class="dropdown-menu dropdown-menu-end">
+                    <li class="px-3 py-2">
+                        <div class="small text-muted">Mode Aktif</div>
+                        <div class="fw-semibold text-dark">{{ $user->roleLabel($activeRole) }}</div>
+                    </li>
+                    @if(count($availableRoles) > 1)
+                        <li><hr class="dropdown-divider"></li>
+                        <li><h6 class="dropdown-header">Ganti Mode</h6></li>
+                        @foreach($availableRoles as $roleOption)
+                            <li>
+                                <form action="{{ route('mode.switch') }}" method="POST">
+                                    @csrf
+                                    <input type="hidden" name="role" value="{{ $roleOption }}">
+                                    <button type="submit" class="dropdown-item d-flex align-items-center justify-content-between {{ $activeRole === $roleOption ? 'active' : '' }}">
+                                        <span>{{ $user->roleLabel($roleOption) }}</span>
+                                        @if($activeRole === $roleOption)
+                                            <i class="bi bi-check2"></i>
+                                        @endif
+                                    </button>
+                                </form>
+                            </li>
+                        @endforeach
+                    @endif
+                    <li><hr class="dropdown-divider"></li>
                     <li><a class="dropdown-item" href="{{ route('profile.show') }}">Profile</a></li>
                     <li>
                         <form action="{{ route('logout') }}" method="POST">

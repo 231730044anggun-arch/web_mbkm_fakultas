@@ -50,7 +50,7 @@
     @else
     <form action="{{ route('dosen.penilaian.store', $pengajuan->id) }}" method="POST" enctype="multipart/form-data">
         @csrf
-        <div class="alert alert-info py-2 small">Nilai sementara akan menjadi final setelah nilai seminar hasil magang lengkap.</div>
+        <div class="alert alert-info py-2 small">Nilai sementara akan diperbarui setelah nilai seminar hasil magang diinput.</div>
         <div class="row g-3">
             @php
                 $fields = \App\Models\Penilaian::tahap1Fields('dosen');

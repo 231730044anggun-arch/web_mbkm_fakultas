@@ -239,6 +239,11 @@ class Penilaian extends Model
 
     public function hasNilaiSeminar(): bool
     {
+        return $this->hasNilaiSeminarDosen() || $this->hasNilaiSeminarPembimbing();
+    }
+
+    public function hasNilaiSeminarLengkap(): bool
+    {
         return $this->hasNilaiSeminarDosen() && $this->hasNilaiSeminarPembimbing();
     }
 
@@ -259,7 +264,7 @@ class Penilaian extends Model
 
     public function isComplete(): bool
     {
-        return $this->hasNilaiSementaraLengkap() && $this->hasNilaiSeminar();
+        return $this->hasNilaiSementaraLengkap() && $this->hasNilaiSeminarLengkap();
     }
 
     public function calculateNilaiDosenBaru(): ?float
@@ -339,10 +344,21 @@ class Penilaian extends Model
         $this->nilai_presentasi_pembimbing = $this->calculateNilaiPresentasi('pembimbing') ?? $this->nilai_presentasi_pembimbing;
         $this->nilai_seminar_pembimbing = $this->calculateNilaiSeminar('pembimbing');
 
-        if ($this->hasNilaiSeminar()) {
+        $hasSeminarDosen = $this->hasNilaiSeminarDosen();
+        $hasSeminarPembimbing = $this->hasNilaiSeminarPembimbing();
+
+        if ($hasSeminarDosen && $hasSeminarPembimbing) {
             $this->nilai_laporan = round(($this->nilai_laporan_dosen * 0.50) + ($this->nilai_laporan_pembimbing * 0.50), 2);
             $this->nilai_presentasi = round(($this->nilai_presentasi_dosen * 0.50) + ($this->nilai_presentasi_pembimbing * 0.50), 2);
             $this->nilai_seminar = round(($this->nilai_seminar_dosen * 0.50) + ($this->nilai_seminar_pembimbing * 0.50), 2);
+        } elseif ($hasSeminarDosen) {
+            $this->nilai_laporan = $this->nilai_laporan_dosen;
+            $this->nilai_presentasi = $this->nilai_presentasi_dosen;
+            $this->nilai_seminar = $this->nilai_seminar_dosen;
+        } elseif ($hasSeminarPembimbing) {
+            $this->nilai_laporan = $this->nilai_laporan_pembimbing;
+            $this->nilai_presentasi = $this->nilai_presentasi_pembimbing;
+            $this->nilai_seminar = $this->nilai_seminar_pembimbing;
         } else {
             $this->nilai_laporan = null;
             $this->nilai_presentasi = null;
@@ -374,7 +390,7 @@ class Penilaian extends Model
             2
         );
 
-        $this->status_nilai = 'final';
+        $this->status_nilai = $this->hasNilaiSeminarLengkap() ? 'final' : 'akhir_saat_ini';
         $this->nilai_akhir = min($nilaiAkhir, 100);
         $this->grade = self::gradeFor($this->nilai_akhir);
         $this->save();
@@ -383,9 +399,33 @@ class Penilaian extends Model
     public function statusNilaiLabel(): string
     {
         return match ($this->status_nilai) {
-            'final' => 'Final',
-            'sementara' => 'Sementara',
-            default => 'Belum Lengkap',
+            'final' => 'Nilai Akhir',
+            'akhir_saat_ini' => 'Nilai Akhir Saat Ini',
+            'sementara' => 'Nilai Sementara',
+            default => 'Nilai Belum Lengkap',
+        };
+    }
+
+    public function seminarStatusLabel(): string
+    {
+        if ($this->hasNilaiSeminarLengkap()) {
+            return 'Nilai Seminar Lengkap';
+        }
+
+        if ($this->hasNilaiSeminar()) {
+            return 'Menunggu Penilai Kedua';
+        }
+
+        return 'Belum Diisi';
+    }
+
+    public function statusNilaiMessage(): string
+    {
+        return match ($this->status_nilai) {
+            'final' => 'Nilai akhir sudah lengkap.',
+            'akhir_saat_ini' => 'Nilai akhir akan diperbarui otomatis setelah penilai kedua mengisi nilai seminar hasil magang.',
+            'sementara' => 'Nilai sementara akan diperbarui setelah nilai seminar hasil magang diinput.',
+            default => 'Nilai belum tersedia karena penilaian Dosen Pembimbing dan Pembimbing Lapangan belum lengkap.',
         };
     }
 

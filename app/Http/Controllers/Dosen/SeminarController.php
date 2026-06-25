@@ -42,7 +42,12 @@ class SeminarController extends Controller
             'status' => 'required|in:disetujui,revisi,ditolak',
             'catatan' => 'required_if:status,revisi,ditolak|nullable|string|max:1000',
         ]);
+        $statusKelayakan = $request->status === 'disetujui' && $kelayakan->status_persetujuan_pembimbing === 'disetujui'
+            ? 'siap_dijadwalkan'
+            : ($request->status === 'disetujui' ? 'menunggu_persetujuan' : $request->status);
+
         $kelayakan->update([
+            'status' => $statusKelayakan,
             'status_persetujuan_dosen' => $request->status,
             'catatan_dosen' => $request->catatan,
             'tanggal_persetujuan_dosen' => $request->status === 'disetujui' ? now() : null,

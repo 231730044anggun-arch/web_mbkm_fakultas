@@ -86,7 +86,7 @@ class MasterPembimbingLapanganController extends Controller
         $shouldCreateAccount = ($data['buat_akun'] ?? false) || filled($data['password'] ?? null);
 
         $user = User::where('email', $data['email'])->first();
-        if ($user && !in_array($user->role, ['pembimbing_lapangan', 'mitra'], true)) {
+        if ($user && !in_array($user->role, ['pembimbing_lapangan', 'mitra', 'dosen'], true) && !$user->hasRoleAccess('pembimbing_lapangan')) {
             throw new \RuntimeException('Email pembimbing sudah digunakan oleh role lain.');
         }
         if (!$user && $shouldCreateAccount) {
@@ -98,7 +98,7 @@ class MasterPembimbingLapanganController extends Controller
                 'status' => $data['status'],
             ]);
         }
-        if ($user) {
+        if ($user && $user->role !== 'dosen') {
             $user->update([
                 'name' => $data['nama'],
                 'status' => $data['status'],
@@ -106,6 +106,8 @@ class MasterPembimbingLapanganController extends Controller
             if (filled($data['password'] ?? null)) {
                 $user->update(['password' => Hash::make($data['password'])]);
             }
+            $userId = $user->id;
+        } elseif ($user) {
             $userId = $user->id;
         }
 

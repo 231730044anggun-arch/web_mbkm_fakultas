@@ -138,6 +138,15 @@ class SkKolektifController extends Controller
         $notes = [];
         $newDosenAccounts = [];
         $newPembimbingAccounts = [];
+        $stats = [
+            'processed' => 0,
+            'dosen_linked' => 0,
+            'dosen_missing' => 0,
+            'pembimbing_linked' => 0,
+            'pembimbing_new_accounts' => 0,
+            'pembimbing_existing_accounts' => 0,
+            'failed' => 0,
+        ];
 
         foreach ($rows as $index => $data) {
             $line = $index + 2;
@@ -181,12 +190,39 @@ class SkKolektifController extends Controller
                 $pengajuan->update(['mitra_id' => $mitra->id]);
             }
 
+            $pembimbingAccountWasNew = false;
+            $pembimbingHadUser = false;
+            $pembimbing = $this->findOrCreatePembimbing($data, $mitra, $newPembimbingAccounts, $pembimbingAccountWasNew, $pembimbingHadUser);
+            if ($pembimbing) {
+                $pengajuan->update(['pembimbing_lapangan_id' => $pembimbing->id]);
+                $pengajuan->absensis()->whereNull('pembimbing_lapangan_id')->update(['pembimbing_lapangan_id' => $pembimbing->id]);
+                $stats['pembimbing_linked']++;
+                if ($pembimbingAccountWasNew) {
+                    $stats['pembimbing_new_accounts']++;
+                } elseif ($pembimbingHadUser) {
+                    $stats['pembimbing_existing_accounts']++;
+                }
+                if ($pembimbing->user) {
+                    Notifikasi::create([
+                        'user_id' => $pembimbing->user->id,
+                        'judul' => 'Mahasiswa Bimbingan Baru',
+                        'pesan' => 'Mahasiswa ' . ($mahasiswa->nama_lengkap ?? $nim) . ' telah terhubung sebagai bimbingan lapangan Anda.',
+                        'status' => 'belum',
+                        'target_url' => route('pembimbing.mahasiswa.show', $pengajuan->id),
+                    ]);
+                }
+            } else {
+                $stats['failed']++;
+                $notes[] = "Baris {$line}: pembimbing lapangan untuk NIM {$nim} belum dapat dibuat/ditautkan. Periksa email pembimbing lapangan.";
+            }
+
             $dosen = $this->findOrCreateDosenData($data, $newDosenAccounts);
             if ($dosen) {
                 Bimbingan::updateOrCreate(
                     ['pengajuan_id' => $pengajuan->id, 'dosen_id' => $dosen->id],
                     ['tanggal_penugasan' => now()->toDateString(), 'status' => 'aktif']
                 );
+                $stats['dosen_linked']++;
                 if ($dosen->user) {
                     Notifikasi::create([
                         'user_id' => $dosen->user->id,
@@ -197,29 +233,23 @@ class SkKolektifController extends Controller
                     ]);
                 }
             } else {
+                $stats['dosen_missing']++;
                 $notes[] = "Baris {$line}: dosen untuk NIM {$nim} belum ditemukan/terhubung.";
             }
 
-            $pembimbing = $this->findOrCreatePembimbing($data, $mitra, $newPembimbingAccounts);
-            if ($pembimbing) {
-                $pengajuan->update(['pembimbing_lapangan_id' => $pembimbing->id]);
-                if ($pembimbing->user) {
-                    Notifikasi::create([
-                        'user_id' => $pembimbing->user->id,
-                        'judul' => 'Mahasiswa Bimbingan Baru',
-                        'pesan' => 'Mahasiswa ' . ($mahasiswa->nama_lengkap ?? $nim) . ' telah terhubung sebagai bimbingan lapangan Anda.',
-                        'status' => 'belum',
-                        'target_url' => route('pembimbing.mahasiswa.show', $pengajuan->id),
-                    ]);
-                }
-            }
-
             $updated++;
+            $stats['processed']++;
         }
 
         $message = 'Import penugasan selesai.';
         $summary = [
-            'processed' => $updated,
+            'processed' => $stats['processed'],
+            'dosen_linked' => $stats['dosen_linked'],
+            'dosen_missing' => $stats['dosen_missing'],
+            'pembimbing_linked' => $stats['pembimbing_linked'],
+            'pembimbing_new_accounts' => $stats['pembimbing_new_accounts'],
+            'pembimbing_existing_accounts' => $stats['pembimbing_existing_accounts'],
+            'failed' => $stats['failed'],
             'dosen' => $newDosenAccounts,
             'pembimbing' => $newPembimbingAccounts,
             'notes' => $notes,
@@ -349,38 +379,67 @@ class SkKolektifController extends Controller
             ->value('id');
     }
 
-    private function findOrCreatePembimbing(array $data, ?Mitra $mitra, array &$newAccounts = []): ?PembimbingLapangan
+    private function findOrCreatePembimbing(array $data, ?Mitra $mitra, array &$newAccounts = [], bool &$accountWasNew = false, bool &$hadUser = false): ?PembimbingLapangan
     {
-        $email = trim($data['email_pembimbing_lapangan'] ?? '');
+        $email = $this->normalizeEmail($data['email_pembimbing_lapangan'] ?? null);
         $nama = trim($data['nama_pembimbing_lapangan'] ?? '');
         if ($email === '' && $nama === '') return null;
 
         $user = null;
-        if (filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        if ($email !== '') {
+            $existingUser = User::whereRaw('LOWER(email) = ?', [$email])->first();
             $user = $this->findOrCreateLoginUser($email, $nama ?: $email, 'pembimbing_lapangan', $newAccounts);
             if (!$user) return null;
+            $accountWasNew = !$existingUser;
+            $hadUser = true;
         }
 
-        return PembimbingLapangan::updateOrCreate(
-            $email !== '' ? ['email' => $email] : ['nama' => $nama, 'mitra_id' => $mitra?->id],
-            [
-                'user_id' => $user?->id,
-                'mitra_id' => $mitra?->id,
-                'nama' => $nama ?: ($user->name ?? '-'),
-                'jabatan' => $data['jabatan_pembimbing_lapangan'] ?? null,
-                'email' => $email ?: null,
-                'no_hp' => $data['no_hp_pembimbing_lapangan'] ?? null,
-                'instansi' => $mitra?->nama_instansi ?? ($data['nama_instansi'] ?? $data['nama_mitra'] ?? null),
-                'status' => 'aktif',
-            ]
-        );
+        $pembimbing = null;
+        if ($user) {
+            $pembimbing = PembimbingLapangan::where('user_id', $user->id)->first();
+        }
+        if (!$pembimbing && $email !== '') {
+            $pembimbing = PembimbingLapangan::whereRaw('LOWER(email) = ?', [$email])->first();
+        }
+        if (!$pembimbing && $nama !== '') {
+            $pembimbing = PembimbingLapangan::where('nama', $nama)->where('mitra_id', $mitra?->id)->first();
+        }
+
+        $pembimbing = $pembimbing ?: new PembimbingLapangan();
+        $pembimbing->fill([
+            'user_id' => $pembimbing->user_id ?: $user?->id,
+            'mitra_id' => $mitra?->id ?: $pembimbing->mitra_id,
+            'nama' => $nama ?: ($pembimbing->nama ?: ($user->name ?? '-')),
+            'jabatan' => $data['jabatan_pembimbing_lapangan'] ?? $pembimbing->jabatan,
+            'email' => $email ?: $pembimbing->email,
+            'no_hp' => $data['no_hp_pembimbing_lapangan'] ?? $pembimbing->no_hp,
+            'instansi' => $mitra?->nama_instansi ?? ($data['nama_instansi'] ?? $data['nama_mitra'] ?? $pembimbing->instansi),
+            'status' => 'aktif',
+        ]);
+        $pembimbing->syncProfileStatus();
+        $pembimbing->save();
+
+        return $pembimbing;
     }
 
     private function findOrCreateLoginUser(string $email, string $name, string $role, array &$newAccounts): ?User
     {
-        $user = User::where('email', $email)->first();
+        $email = $this->normalizeEmail($email);
+        if ($email === '') {
+            return null;
+        }
+
+        $user = User::whereRaw('LOWER(email) = ?', [$email])->first();
         if ($user) {
-            return $user->role === $role ? $user : null;
+            if ($user->role === $role || $user->hasRoleAccess($role)) {
+                return $user;
+            }
+
+            if ($role === 'pembimbing_lapangan' && $user->role === 'dosen') {
+                return $user;
+            }
+
+            return null;
         }
 
         $temporaryPassword = Str::random(10);
@@ -399,6 +458,13 @@ class SkKolektifController extends Controller
         ];
 
         return $user;
+    }
+
+    private function normalizeEmail(?string $email): string
+    {
+        $email = strtolower(trim(preg_replace('/\s+/u', '', (string) $email)));
+
+        return filter_var($email, FILTER_VALIDATE_EMAIL) ? $email : '';
     }
 
     private function headerMap(array $header): array

@@ -30,17 +30,20 @@
     $nilaiPembimbingReady = $penilaian?->hasNilaiPembimbingTahap1() ?? false;
     $nilaiSementara = $penilaian?->nilai_sementara ?? $penilaian?->nilaiAkhirSementara();
     $nilaiSeminarReady = $penilaian?->hasNilaiSeminar() ?? false;
-    $nilaiFinal = $penilaian?->isComplete() && $penilaian?->nilai_akhir !== null;
-    $statusNilai = $penilaian?->statusNilaiLabel() ?? 'Belum Lengkap';
-    $statusBadge = $statusNilai === 'Final' ? 'success' : ($statusNilai === 'Sementara' ? 'warning text-dark' : 'secondary');
-
-    if (!$nilaiDosenReady || !$nilaiPembimbingReady) {
-        $finalMessage = 'Nilai belum tersedia karena penilaian Dosen Pembimbing dan Pembimbing Lapangan belum lengkap.';
-    } elseif (!$nilaiSeminarReady) {
-        $finalMessage = 'Nilai sementara. Nilai akhir akan menjadi final setelah nilai seminar hasil magang lengkap.';
-    } else {
-        $finalMessage = 'Nilai akhir sudah final.';
-    }
+    $nilaiSeminarLengkap = $penilaian?->hasNilaiSeminarLengkap() ?? false;
+    $statusKey = $penilaian?->status_nilai ?? 'belum_lengkap';
+    $nilaiFinal = $statusKey === 'final' && $penilaian?->nilai_akhir !== null;
+    $nilaiAkhirSaatIni = $statusKey === 'akhir_saat_ini' && $penilaian?->nilai_akhir !== null;
+    $statusNilai = $penilaian?->statusNilaiLabel() ?? 'Nilai Belum Lengkap';
+    $statusBadge = match ($statusKey) {
+        'final' => 'success',
+        'akhir_saat_ini' => 'info text-dark',
+        'sementara' => 'warning text-dark',
+        default => 'secondary',
+    };
+    $finalMessage = $penilaian?->statusNilaiMessage() ?? 'Nilai belum tersedia karena penilaian Dosen Pembimbing dan Pembimbing Lapangan belum lengkap.';
+    $mainScoreLabel = $nilaiFinal ? 'Nilai Akhir' : ($nilaiAkhirSaatIni ? 'Nilai Akhir Saat Ini' : 'Nilai Sementara');
+    $mainScoreValue = ($nilaiFinal || $nilaiAkhirSaatIni) ? $penilaian?->nilai_akhir : $nilaiSementara;
 @endphp
 
 <div class="row g-4 assessment-page">
@@ -57,7 +60,7 @@
                 <div class="col-md-3"><div class="text-muted small">Nilai Tahap 1 Dosen</div><div class="fw-bold">{{ $penilaian?->nilai_tahap1_dosen !== null ? number_format($penilaian->nilai_tahap1_dosen, 2) : '-' }}</div></div>
                 <div class="col-md-3"><div class="text-muted small">Nilai Tahap 1 Pembimbing</div><div class="fw-bold">{{ $penilaian?->nilai_tahap1_pembimbing !== null ? number_format($penilaian->nilai_tahap1_pembimbing, 2) : '-' }}</div></div>
                 <div class="col-md-3"><div class="text-muted small">Nilai Seminar Gabungan</div><div class="fw-bold">{{ $penilaian?->nilai_seminar !== null ? number_format($penilaian->nilai_seminar, 2) : '-' }}</div></div>
-                <div class="col-md-3"><div class="text-muted small">{{ $nilaiFinal ? 'Nilai Akhir Final' : 'Nilai Sementara' }}</div><div class="fw-bold {{ $nilaiFinal ? 'text-success' : 'text-warning' }}">{{ $nilaiFinal ? number_format($penilaian->nilai_akhir, 2) : ($nilaiSementara !== null ? number_format($nilaiSementara, 2) : '-') }}</div></div>
+                <div class="col-md-3"><div class="text-muted small">{{ $mainScoreLabel }}</div><div class="fw-bold {{ $nilaiFinal ? 'text-success' : ($nilaiAkhirSaatIni ? 'text-primary' : 'text-warning') }}">{{ $mainScoreValue !== null ? number_format($mainScoreValue, 2) : '-' }}</div></div>
             </div>
             <div class="mt-3">
                 @if($nilaiFinal)
@@ -79,11 +82,23 @@
                         <div class="score-hero-number">{{ number_format($penilaian->nilai_akhir, 2) }}</div>
                     </div>
                     <div class="text-md-end">
-                        <span class="badge bg-success assessment-badge mb-2">Final</span>
+                        <span class="badge bg-success assessment-badge mb-2">Nilai Seminar Lengkap</span>
                         <div><span class="badge bg-light text-dark border assessment-badge">Grade {{ $penilaian->grade }}</span></div>
                     </div>
                 </div>
-                <div class="text-muted small mt-3">Nilai akhir sudah final.</div>
+                <div class="text-muted small mt-3">{{ $finalMessage }}</div>
+            @elseif($nilaiAkhirSaatIni)
+                <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
+                    <div>
+                        <div class="score-hero-label mb-2">Nilai Akhir Saat Ini</div>
+                        <div class="score-hero-number">{{ number_format($penilaian->nilai_akhir, 2) }}</div>
+                    </div>
+                    <div class="text-md-end">
+                        <span class="badge bg-info text-dark assessment-badge mb-2">Menunggu Penilai Kedua</span>
+                        <div><span class="badge bg-light text-dark border assessment-badge">Grade {{ $penilaian->grade }}</span></div>
+                    </div>
+                </div>
+                <div class="text-muted small mt-3">{{ $finalMessage }}</div>
             @elseif($nilaiSementara !== null)
                 <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
                     <div>
@@ -91,11 +106,11 @@
                         <div class="score-hero-number">{{ number_format($nilaiSementara, 2) }}</div>
                     </div>
                     <div class="text-md-end">
-                        <span class="badge bg-warning text-dark assessment-badge mb-2">Sementara</span>
+                        <span class="badge bg-warning text-dark assessment-badge mb-2">Nilai Sementara</span>
                         <div><span class="badge bg-light text-dark border assessment-badge">Grade Sementara {{ \App\Models\Penilaian::gradeFor($nilaiSementara) }}</span></div>
                     </div>
                 </div>
-                <div class="text-muted small mt-3">Nilai akhir akan menjadi final setelah nilai seminar hasil magang lengkap.</div>
+                <div class="text-muted small mt-3">{{ $finalMessage }}</div>
             @else
                 <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
                     <div>
@@ -178,7 +193,7 @@
                     <div class="score-mini-card">
                         <div class="score-mini-label mb-2">Nilai Seminar Hasil Magang Gabungan</div>
                         <div class="score-mini-number">{{ $penilaian?->nilai_seminar !== null ? number_format($penilaian->nilai_seminar, 2) : '-' }}</div>
-                        <div class="text-muted small mt-3">Gabungan nilai seminar dari dosen pembimbing dan pembimbing lapangan.</div>
+                        <div class="text-muted small mt-3">{{ $penilaian?->seminarStatusLabel() ?? 'Belum Diisi' }}</div>
                     </div>
                 </div>
                 @if($penilaian?->nama_penguji)<div class="col-md-6"><div class="text-muted small">Penguji</div><div>{{ $penilaian->nama_penguji }}</div></div>@endif
