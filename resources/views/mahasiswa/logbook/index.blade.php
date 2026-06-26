@@ -3,6 +3,14 @@
 @section('page-title', 'Logbook Magang')
 
 @section('content')
+<style>
+    .logbook-desktop-table th,
+    .logbook-desktop-table td { vertical-align: top; white-space: normal; }
+    .logbook-desktop-table .col-kegiatan { min-width: 220px; }
+    .logbook-desktop-table .col-output { min-width: 200px; }
+    .logbook-mobile-card { border: 1px solid #e8ddff; border-radius: 12px; padding: 14px; background: #fff; }
+    .logbook-mobile-card + .logbook-mobile-card { margin-top: 12px; }
+</style>
 @if($errors->any())
 <div class="alert alert-danger">
     <strong>Logbook belum bisa disimpan.</strong>
@@ -98,6 +106,13 @@
                     <option value="revisi" {{ request('status')=='revisi' ? 'selected' : '' }}>Revisi</option>
                 </select>
             </div>
+            <div class="col-auto">
+                <select name="per_page" class="form-select form-select-sm">
+                    @foreach([5, 10, 15] as $size)
+                        <option value="{{ $size }}" @selected((int) request('per_page', 10) === $size)>{{ $size }}</option>
+                    @endforeach
+                </select>
+            </div>
             <div class="col-auto"><button class="btn btn-sm btn-outline-primary">Filter</button></div>
             <div class="col-auto"><a href="{{ route('mahasiswa.logbook.export', $pengajuan->id) }}?from={{ request('from') }}&to={{ request('to') }}&status={{ request('status') }}" class="btn btn-sm btn-outline-secondary">Export PDF</a></div>
         </form>
@@ -107,14 +122,14 @@
     <div class="alert alert-warning">Logbook mingguan belum lengkap. Anda belum mengisi logbook untuk minggu: {{ implode(', ', $missing) }}.</div>
     @endif
 
-    <div class="table-responsive">
-        <table class="table table-hover student-table">
+    <div class="table-responsive d-none d-md-block">
+        <table class="table table-hover student-table logbook-desktop-table">
             <thead class="table-light">
                 <tr>
                     <th class="align-top">Tanggal Kegiatan</th>
                     <th class="align-top">Jam Kegiatan</th>
-                    <th class="align-top">Deskripsi Kegiatan</th>
-                    <th class="align-top">Output Kegiatan</th>
+                    <th class="align-top col-kegiatan">Deskripsi Kegiatan</th>
+                    <th class="align-top col-output">Output Kegiatan</th>
                     <th class="align-top">Kendala</th>
                     <th class="align-top">Solusi</th>
                     <th class="align-top">Status Dosen Pembimbing</th>
@@ -169,6 +184,50 @@
                 @endforelse
             </tbody>
         </table>
+    </div>
+    <div class="d-md-none">
+        @forelse($logbooks as $l)
+            @php $badge = ['pending'=>'warning','menunggu'=>'warning','disetujui'=>'success','selesai'=>'success','berjalan'=>'primary','revisi'=>'warning','ditolak'=>'danger','terlambat'=>'danger']; @endphp
+            <div class="logbook-mobile-card">
+                <div class="d-flex justify-content-between gap-2 align-items-start">
+                    <div>
+                        <div class="fw-semibold">{{ $l->tanggal }}</div>
+                        <div class="small text-muted">{{ $l->jam_mulai }} - {{ $l->jam_selesai }}</div>
+                    </div>
+                    <div class="text-end">
+                        <span class="badge bg-{{ $badge[$l->status_dosen ?? 'pending'] ?? 'secondary' }} student-badge">{{ ucwords(str_replace('_', ' ', $l->status_dosen ?? 'pending')) }}</span>
+                        <div class="mt-1"><span class="badge bg-{{ $badge[$l->status_mitra ?? 'pending'] ?? 'secondary' }} student-badge">{{ ucwords(str_replace('_', ' ', $l->status_mitra ?? 'pending')) }}</span></div>
+                    </div>
+                </div>
+                <div class="mt-3">
+                    <div class="small text-muted">Kegiatan</div>
+                    <div>{{ \Illuminate\Support\Str::limit($l->kegiatan, 130) }}</div>
+                </div>
+                <div class="mt-2">
+                    <div class="small text-muted">Output</div>
+                    <div>{{ \Illuminate\Support\Str::limit($l->output_kegiatan ?: 'Tidak ada', 130) }}</div>
+                </div>
+                <details class="mt-2">
+                    <summary class="small text-primary">Detail kendala, solusi, dan catatan</summary>
+                    <div class="small mt-2">
+                        <div><strong>Kendala:</strong> {{ $l->kendala ?: 'Tidak ada' }}</div>
+                        <div><strong>Solusi:</strong> {{ $l->solusi ?: 'Tidak ada' }}</div>
+                        <div><strong>Catatan Dosen:</strong> {{ $l->catatan_dosen ?: 'Tidak ada' }}</div>
+                        <div><strong>Catatan Pembimbing:</strong> {{ $l->catatan_mitra ?: 'Tidak ada' }}</div>
+                    </div>
+                </details>
+                <div class="student-action-buttons mt-3">
+                    @if($l->bukti_foto)
+                        <a href="{{ route('logbook.bukti.preview', $l->id) }}" target="_blank" class="btn btn-sm btn-outline-primary">Lihat Bukti</a>
+                    @endif
+                    @if(in_array($l->status_validasi, ['pending','revisi'], true))
+                        <a href="{{ route('mahasiswa.logbook.edit', $l->id) }}" class="btn btn-sm btn-outline-warning">Edit</a>
+                    @endif
+                </div>
+            </div>
+        @empty
+            <div class="text-center text-muted py-4">Belum ada logbook.</div>
+        @endforelse
     </div>
     @if($logbooks->hasMorePages() || $logbooks->currentPage() > 1)
     <div class="mt-3 d-flex justify-content-end gap-2">

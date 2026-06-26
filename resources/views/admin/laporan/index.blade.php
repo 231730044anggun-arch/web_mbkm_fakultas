@@ -369,7 +369,9 @@
                     <th>Mitra</th>
                     <th>Kota</th>
                     <th>Status Magang</th>
+                    <th>Nama Dosen Pembimbing</th>
                     <th>Dosen Pembimbing</th>
+                    <th>Pembimbing Lapangan</th>
                     <th>Periode</th>
                 </tr>
             </thead>
@@ -388,10 +390,24 @@
                         </span>
                     </td>
                     <td>{{ $row->bimbingans->pluck('dosen.nama_dosen')->filter()->unique()->implode(', ') ?: '-' }}</td>
+                    <td>
+                        @if($row->penilaian?->hasNilaiDosenTahap1())
+                            <span class="badge bg-success">✓ Sudah Menilai</span>
+                        @else
+                            <span class="badge bg-light text-dark border">— Belum Menilai</span>
+                        @endif
+                    </td>
+                    <td>
+                        @if($row->penilaian?->hasNilaiPembimbingTahap1())
+                            <span class="badge bg-success">✓ Sudah Menilai</span>
+                        @else
+                            <span class="badge bg-light text-dark border">— Belum Menilai</span>
+                        @endif
+                    </td>
                     <td>{{ $row->periode->nama_periode ?? '-' }}</td>
                 </tr>
                 @empty
-                <tr><td colspan="8" class="text-center text-muted py-4">Belum ada data mahasiswa magang berjalan atau selesai.</td></tr>
+                <tr><td colspan="10" class="text-center text-muted py-4">Belum ada data mahasiswa magang berjalan atau selesai.</td></tr>
                 @endforelse
             </tbody>
         </table>

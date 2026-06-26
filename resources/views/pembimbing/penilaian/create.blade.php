@@ -73,7 +73,7 @@
             @foreach($fields as $name => $label)
             <div class="col-md-6">
                 <label class="form-label fw-semibold">{{ $loop->iteration }}. {{ $label }}</label>
-                <input type="number" name="{{ $name }}" class="form-control @error($name) is-invalid @enderror" min="0" max="100" value="{{ old($name, $penilaian?->{$name}) }}" required>
+                <input type="number" name="{{ $name }}" class="form-control @error($name) is-invalid @enderror" min="1" max="100" step="0.01" value="{{ old($name, $penilaian?->{$name}) }}" required>
                 @error($name)<div class="invalid-feedback">{{ $message }}</div>@enderror
             </div>
             @endforeach

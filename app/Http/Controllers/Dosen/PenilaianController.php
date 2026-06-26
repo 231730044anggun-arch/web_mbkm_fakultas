@@ -49,7 +49,7 @@ class PenilaianController extends Controller
                 ->with('error', $lockMessage);
         }
 
-        $request->validate($this->rules());
+        $request->validate($this->rules(), $this->validationMessages());
         $existing = Penilaian::where('pengajuan_id', $pengajuanId)->first();
         $filePenilaian = $existing?->file_penilaian_formal_dosen;
         if ($request->hasFile('file_penilaian_formal')) {
@@ -126,7 +126,7 @@ class PenilaianController extends Controller
         ];
 
         foreach (array_keys(Penilaian::tahap1Fields('dosen')) as $field) {
-            $rules[$field] = 'required|numeric|min:0|max:100';
+            $rules[$field] = 'required|numeric|min:1|max:100';
         }
 
         foreach (array_keys(Penilaian::laporanRubrik('dosen') + Penilaian::presentasiRubrik('dosen')) as $field) {
@@ -134,6 +134,20 @@ class PenilaianController extends Controller
         }
 
         return $rules;
+    }
+
+    private function validationMessages(): array
+    {
+        $messages = [];
+
+        foreach (array_keys(Penilaian::tahap1Fields('dosen')) as $field) {
+            $messages[$field . '.required'] = 'Nilai wajib diisi.';
+            $messages[$field . '.numeric'] = 'Nilai harus berupa angka.';
+            $messages[$field . '.min'] = 'Nilai minimal adalah 1.';
+            $messages[$field . '.max'] = 'Nilai maksimal adalah 100.';
+        }
+
+        return $messages;
     }
 
     private function stageOnePayload(Request $request, string $role): array

@@ -22,6 +22,7 @@ class KelayakanSeminar extends Model
     public function mahasiswa() { return $this->belongsTo(MahasiswaProfile::class, 'mahasiswa_id'); }
     public function dosen() { return $this->belongsTo(Dosen::class); }
     public function pembimbingLapangan() { return $this->belongsTo(PembimbingLapangan::class, 'pembimbing_lapangan_id'); }
+    public function catatanHistories() { return $this->hasMany(KelayakanSeminarCatatanHistory::class)->latest(); }
 
     public function isApproved(): bool
     {

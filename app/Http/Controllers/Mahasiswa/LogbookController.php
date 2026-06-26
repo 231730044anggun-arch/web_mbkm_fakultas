@@ -30,7 +30,10 @@ class LogbookController extends Controller
         if ($request->filled('from')) $query->where('tanggal', '>=', $request->from);
         if ($request->filled('to')) $query->where('tanggal', '<=', $request->to);
         if ($request->filled('status')) $query->where('status_validasi', $request->status);
-        $logbooks  = $query->orderBy('tanggal', 'desc')->paginate(10)->withQueryString();
+        $perPage = in_array((int) $request->input('per_page', 10), [5, 10, 15], true)
+            ? (int) $request->input('per_page', 10)
+            : 10;
+        $logbooks  = $query->orderBy('tanggal', 'desc')->paginate($perPage)->withQueryString();
         $missing = $this->findMissingWeeks(
             $pengajuan,
             null,

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Dosen;
 use App\Http\Controllers\Concerns\HandlesSecurePublicFiles;
 use App\Http\Controllers\Controller;
 use App\Models\KelayakanSeminar;
+use App\Models\KelayakanSeminarCatatanHistory;
 use App\Models\Notifikasi;
 use App\Models\PengajuanMagang;
 use App\Models\User;
@@ -31,7 +32,7 @@ class SeminarController extends Controller
     public function show(KelayakanSeminar $kelayakan)
     {
         abort_unless($this->idsMatch($kelayakan->dosen_id, auth()->user()->dosen?->id), 403);
-        $kelayakan->load(['pengajuan.mahasiswa.prodi', 'pengajuan.mitra', 'pengajuan.bimbinganFormals', 'pengajuan.pembimbingLapangan']);
+        $kelayakan->load(['pengajuan.mahasiswa.prodi', 'pengajuan.mitra', 'pengajuan.bimbinganFormals', 'pengajuan.pembimbingLapangan', 'catatanHistories.user']);
         return view('dosen.seminar.show', compact('kelayakan'));
     }
 
@@ -51,6 +52,14 @@ class SeminarController extends Controller
             'status_persetujuan_dosen' => $request->status,
             'catatan_dosen' => $request->catatan,
             'tanggal_persetujuan_dosen' => $request->status === 'disetujui' ? now() : null,
+        ]);
+        KelayakanSeminarCatatanHistory::create([
+            'kelayakan_seminar_id' => $kelayakan->id,
+            'user_id' => auth()->id(),
+            'role_pemberi' => 'Dosen Pembimbing',
+            'nama_pemberi' => auth()->user()->dosen?->nama_dosen ?? auth()->user()->name ?? auth()->user()->email,
+            'status_tindakan' => $request->status,
+            'catatan' => $request->catatan,
         ]);
         $this->notifyMahasiswa($kelayakan, 'Status Kelayakan Seminar dari Dosen', 'Dosen pembimbing memberi status ' . $request->status . ' pada bahan kelayakan seminar Anda.');
         $fresh = $kelayakan->fresh(['pengajuan.mahasiswa']);

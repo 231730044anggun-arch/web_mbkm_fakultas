@@ -31,6 +31,22 @@
     <a href="{{ route(str_starts_with(Route::currentRouteName(), 'dosen.') ? 'dosen.seminar.file' : 'pembimbing.seminar.file', [$kelayakan->id, 'jurnal']) }}" target="_blank" class="btn btn-sm btn-outline-primary">Lihat Draft Jurnal</a>
     @endif
 </div>
+<div class="card p-4 mb-4">
+    <h6 class="fw-bold mb-3">Riwayat Catatan Kelayakan</h6>
+    @forelse($kelayakan->catatanHistories as $history)
+        <div class="border rounded-3 p-3 mb-2">
+            <div class="d-flex flex-wrap justify-content-between gap-2">
+                <div class="fw-semibold">{{ $history->role_pemberi }}</div>
+                <div class="text-muted small">{{ optional($history->created_at)->format('d/m/Y H:i') }}</div>
+            </div>
+            <div class="small mt-1">Pemberi: {{ $history->nama_pemberi ?: '-' }}</div>
+            <div class="small">Status: <span class="badge bg-{{ $history->status_tindakan === 'disetujui' ? 'success' : ($history->status_tindakan === 'ditolak' ? 'danger' : 'warning text-dark') }}">{{ ucwords(str_replace('_', ' ', $history->status_tindakan)) }}</span></div>
+            <div class="mt-2">Catatan: {{ $history->catatan ?: '-' }}</div>
+        </div>
+    @empty
+        <div class="text-muted small">Belum ada riwayat catatan.</div>
+    @endforelse
+</div>
 <div class="card p-4">
     <h6 class="fw-bold mb-3">Validasi Kelayakan</h6>
     <form action="{{ route(str_starts_with(Route::currentRouteName(), 'dosen.') ? 'dosen.seminar.validasi' : 'pembimbing.seminar.validasi', $kelayakan->id) }}" method="POST" class="row g-3">

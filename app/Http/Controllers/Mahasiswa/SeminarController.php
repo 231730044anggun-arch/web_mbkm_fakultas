@@ -27,7 +27,7 @@ class SeminarController extends Controller
 
         $pengajuans = PengajuanMagang::with([
             'mitra', 'periode', 'dokumens', 'logbooks', 'absensis',
-            'bimbingans.dosen.user', 'bimbinganFormals', 'pembimbingLapangan.user', 'kelayakanSeminar'
+            'bimbingans.dosen.user', 'bimbinganFormals', 'pembimbingLapangan.user', 'kelayakanSeminar.catatanHistories.user'
         ])
             ->where('mahasiswa_id', $mahasiswa->id)
             ->where('jenis_pengajuan', 'surat_keterangan')
@@ -55,7 +55,9 @@ class SeminarController extends Controller
 
     public function storeKelayakan(Request $request, $pengajuanId)
     {
+        $requestId = uniqid('kelayakan_', true);
         Log::info('Kelayakan seminar submit masuk', [
+            'request_id' => $requestId,
             'user_id' => auth()->id(),
             'pengajuan_id' => $pengajuanId,
             'marker' => $request->input('kelayakan_form_marker'),
@@ -97,6 +99,7 @@ class SeminarController extends Controller
         $pembimbingLapanganId = $this->resolveSinglePembimbingLapanganId($pengajuan);
 
         Log::info('Kelayakan seminar sebelum simpan', [
+            'request_id' => $requestId,
             'mahasiswa_id' => $pengajuan->mahasiswa_id,
             'pengajuan_id' => $pengajuan->id,
             'dosen_id' => $dosenId,
@@ -106,6 +109,7 @@ class SeminarController extends Controller
         $reviewerPerluVerifikasi = !$dosenId || !$pembimbingLapanganId;
         if ($reviewerPerluVerifikasi) {
             Log::warning('Kelayakan seminar relasi reviewer perlu verifikasi admin', [
+                'request_id' => $requestId,
                 'pengajuan_id' => $pengajuan->id,
                 'mahasiswa_id' => $pengajuan->mahasiswa_id,
                 'dosen_id' => $dosenId,
@@ -146,10 +150,11 @@ class SeminarController extends Controller
                 $payload
             );
 
-            $warnings = $this->storeKelayakanFilesSafely($request, $kelayakan);
+            $warnings = $this->storeKelayakanFilesSafely($request, $kelayakan, $requestId);
             $kelayakan = $kelayakan->fresh(['pengajuan.mahasiswa', 'dosen.user', 'pembimbingLapangan.user']);
 
             Log::info('Kelayakan seminar berhasil disimpan', [
+                'request_id' => $requestId,
                 'kelayakan_id' => $kelayakan->id,
                 'pengajuan_id' => $kelayakan->pengajuan_id,
                 'status' => $kelayakan->status,
@@ -175,6 +180,7 @@ class SeminarController extends Controller
             return $redirect;
         } catch (\Throwable $e) {
             Log::error('Gagal menyimpan kelayakan seminar', [
+                'request_id' => $requestId,
                 'pengajuan_id' => $pengajuan->id,
                 'mahasiswa_id' => $pengajuan->mahasiswa_id,
                 'message' => $e->getMessage(),
@@ -183,7 +189,7 @@ class SeminarController extends Controller
 
             return back()
                 ->withInput()
-                ->with('error', 'Kelayakan seminar belum dapat dikirim karena terjadi kendala server. Silakan coba lagi atau hubungi admin.');
+                ->with('error', 'Kelayakan seminar belum dapat dikirim karena server tidak dapat menyimpan data pengajuan. Silakan coba lagi atau hubungi admin dengan kode: ' . $requestId . '.');
         }
     }
 
@@ -265,14 +271,14 @@ class SeminarController extends Controller
 
     private function findOwnedPengajuan($pengajuanId): PengajuanMagang
     {
-        return PengajuanMagang::with(['mahasiswa.user', 'dokumens', 'logbooks', 'absensis', 'bimbingans.dosen.user', 'bimbinganFormals', 'mitra', 'pembimbingLapangan.user', 'kelayakanSeminar'])
+        return PengajuanMagang::with(['mahasiswa.user', 'dokumens', 'logbooks', 'absensis', 'bimbingans.dosen.user', 'bimbinganFormals', 'mitra', 'pembimbingLapangan.user', 'kelayakanSeminar.catatanHistories.user'])
             ->where('mahasiswa_id', auth()->user()->mahasiswaProfile?->id)
             ->findOrFail($pengajuanId);
     }
 
     private function findOwnedActiveKelayakanPengajuan($pengajuanId): ?PengajuanMagang
     {
-        return PengajuanMagang::with(['mahasiswa.user', 'dokumens', 'logbooks', 'absensis', 'bimbingans.dosen.user', 'bimbinganFormals', 'mitra', 'pembimbingLapangan.user', 'kelayakanSeminar'])
+        return PengajuanMagang::with(['mahasiswa.user', 'dokumens', 'logbooks', 'absensis', 'bimbingans.dosen.user', 'bimbinganFormals', 'mitra', 'pembimbingLapangan.user', 'kelayakanSeminar.catatanHistories.user'])
             ->where('mahasiswa_id', auth()->user()->mahasiswaProfile?->id)
             ->where('jenis_pengajuan', 'surat_keterangan')
             ->whereIn('status_pengajuan', ['berjalan', 'selesai'])
@@ -289,7 +295,7 @@ class SeminarController extends Controller
         return $deadline ? now()->gt($deadline) : false;
     }
 
-    private function storeKelayakanFilesSafely(Request $request, KelayakanSeminar $kelayakan): array
+    private function storeKelayakanFilesSafely(Request $request, KelayakanSeminar $kelayakan, string $requestId): array
     {
         $warnings = [];
         $maxBytes = 102400 * 1024;
@@ -321,33 +327,48 @@ class SeminarController extends Controller
         ];
 
         foreach ($files as $field => $config) {
-            if (!$request->hasFile($field)) {
+            $file = $request->files->get($field);
+
+            if (!$file) {
                 if (!$kelayakan->{$config['column']}) {
                     $warnings[] = $config['label'] . ' belum diunggah.';
                 }
                 continue;
             }
 
-            $file = $request->file($field);
+            Log::info('Kelayakan seminar file diterima', [
+                'request_id' => $requestId,
+                'kelayakan_id' => $kelayakan->id,
+                'pengajuan_id' => $kelayakan->pengajuan_id,
+                'field' => $field,
+                'original_name' => $file->getClientOriginalName(),
+                'size' => $file->getSize(),
+                'error_code' => method_exists($file, 'getError') ? $file->getError() : null,
+            ]);
+
             if (!$file || !$file->isValid()) {
-                $warnings[] = $config['label'] . ' belum berhasil diterima oleh server.';
+                $warnings[] = $this->uploadErrorMessage($config['label'], method_exists($file, 'getError') ? $file->getError() : null);
                 continue;
             }
 
             if ($file->getSize() > $maxBytes) {
-                $warnings[] = 'Ukuran file ' . $config['label'] . ' melebihi 100 MB.';
+                $warnings[] = 'Ukuran file ' . $config['label'] . ' maksimal 100 MB.';
                 continue;
             }
 
             $extension = strtolower($file->getClientOriginalExtension());
             if (!in_array($extension, $config['allowed'], true)) {
-                $warnings[] = 'Format file ' . $config['label'] . ' belum sesuai.';
+                $warnings[] = 'Format file ' . $config['label'] . ' tidak didukung.';
                 continue;
             }
 
             try {
                 $oldPath = $kelayakan->{$config['column']};
                 $path = $file->store($config['directory'], 'public');
+                if (!$path) {
+                    $warnings[] = 'File ' . $config['label'] . ' tidak dapat disimpan di server. Silakan coba kembali atau hubungi admin.';
+                    continue;
+                }
                 $kelayakan->update([$config['column'] => $path]);
                 $this->syncDokumenArsip($kelayakan->pengajuan_id, $config['dokumen'], $path, $config['catatan']);
 
@@ -356,15 +377,31 @@ class SeminarController extends Controller
                 }
             } catch (\Throwable $e) {
                 Log::warning('Upload file kelayakan seminar gagal diproses', [
+                    'request_id' => $requestId,
                     'kelayakan_id' => $kelayakan->id,
+                    'pengajuan_id' => $kelayakan->pengajuan_id,
                     'field' => $field,
+                    'size' => $file->getSize(),
+                    'error_code' => method_exists($file, 'getError') ? $file->getError() : null,
                     'message' => $e->getMessage(),
                 ]);
-                $warnings[] = $config['label'] . ' belum berhasil disimpan.';
+                $warnings[] = 'File ' . $config['label'] . ' tidak dapat disimpan di server. Silakan coba kembali atau hubungi admin.';
             }
         }
 
         return $warnings;
+    }
+
+    private function uploadErrorMessage(string $label, ?int $errorCode): string
+    {
+        return match ($errorCode) {
+            UPLOAD_ERR_INI_SIZE, UPLOAD_ERR_FORM_SIZE => 'Ukuran file ' . $label . ' melebihi batas server. Maksimal 100 MB per file.',
+            UPLOAD_ERR_PARTIAL => 'File ' . $label . ' hanya terunggah sebagian. Silakan unggah ulang.',
+            UPLOAD_ERR_NO_TMP_DIR => 'Server tidak memiliki folder sementara untuk upload. Silakan hubungi admin.',
+            UPLOAD_ERR_CANT_WRITE => 'File ' . $label . ' tidak dapat ditulis ke server. Silakan hubungi admin.',
+            UPLOAD_ERR_EXTENSION => 'Upload file ' . $label . ' dihentikan oleh ekstensi server. Silakan hubungi admin.',
+            default => 'File ' . $label . ' belum berhasil diterima oleh server. Silakan unggah ulang.',
+        };
     }
 
     private function resolveSingleDosenId(PengajuanMagang $pengajuan): ?int

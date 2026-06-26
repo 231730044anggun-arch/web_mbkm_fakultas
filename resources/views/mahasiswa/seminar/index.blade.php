@@ -70,6 +70,18 @@
                             <div class="mb-1">Pembimbing Lapangan: <span class="badge bg-{{ $approvalBadge[$kelayakan->status_persetujuan_pembimbing] ?? 'secondary' }} student-badge">{{ ucwords(str_replace('_', ' ', $kelayakan->status_persetujuan_pembimbing)) }}</span></div>
                             @if($kelayakan->catatan_dosen)<div class="small text-danger">Catatan Dosen Pembimbing: {{ $kelayakan->catatan_dosen }}</div>@endif
                             @if($kelayakan->catatan_pembimbing)<div class="small text-danger">Catatan Pembimbing Lapangan: {{ $kelayakan->catatan_pembimbing }}</div>@endif
+                            @if($kelayakan->catatanHistories->isNotEmpty())
+                                <div class="mt-2">
+                                    <div class="small fw-semibold">Riwayat Catatan:</div>
+                                    @foreach($kelayakan->catatanHistories as $history)
+                                        <div class="small border rounded-3 p-2 mt-1">
+                                            <div class="fw-semibold">{{ $history->role_pemberi }} <span class="text-muted fw-normal">{{ optional($history->created_at)->format('d/m/Y H:i') }}</span></div>
+                                            <div>Status: {{ ucwords(str_replace('_', ' ', $history->status_tindakan)) }}</div>
+                                            <div>Catatan: {{ $history->catatan ?: '-' }}</div>
+                                        </div>
+                                    @endforeach
+                                </div>
+                            @endif
                         @else
                             <span class="text-muted">Belum dikirim</span>
                         @endif

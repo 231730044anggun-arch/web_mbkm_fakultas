@@ -34,7 +34,7 @@
                     <th class="align-top">Program Studi</th>
                     <th class="align-top">Tempat Magang/Mitra</th>
                     <th class="align-top">Status Nilai</th>
-                    <th class="align-top">Nilai Sementara</th>
+                    <th class="align-top">Nilai Sementara Saya</th>
                     <th class="align-top">Nilai Final</th>
                     <th class="align-top">Aksi</th>
                 </tr>
@@ -64,7 +64,7 @@
                         @endphp
                         <span class="badge bg-{{ $nilaiBadge }} assessment-badge">{{ $pengajuan->penilaian?->statusNilaiLabel() ?? 'Nilai Belum Lengkap' }}</span>
                     </td>
-                    <td class="align-top">{{ $pengajuan->penilaian?->nilai_sementara !== null ? number_format($pengajuan->penilaian->nilai_sementara, 2) : '-' }}</td>
+                    <td class="align-top">{{ $pengajuan->penilaian?->nilai_tahap1_pembimbing !== null ? number_format($pengajuan->penilaian->nilai_tahap1_pembimbing, 2) : '-' }}</td>
                     <td class="align-top">
                         @if($pengajuan->penilaian?->nilai_akhir !== null)
                             <div class="fw-semibold text-success">{{ number_format($pengajuan->penilaian->nilai_akhir, 2) }}</div>
