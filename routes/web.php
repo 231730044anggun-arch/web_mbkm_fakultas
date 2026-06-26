@@ -160,8 +160,7 @@ Route::prefix('mahasiswa')->middleware(['auth', 'role:mahasiswa'])->name('mahasi
     Route::get('/mitra', [MahasiswaMitra::class, 'index'])->name('mitra.index');
     Route::get('/seminar', [MahasiswaSeminar::class, 'index'])->name('seminar.index');
     Route::post('/seminar', [MahasiswaSeminar::class, 'store'])->name('seminar.store');
-    Route::post('/seminar/{pengajuanId}/kelayakan', [MahasiswaSeminar::class, 'storeKelayakan'])->name('seminar.kelayakan.store');
-    Route::get('/seminar/kelayakan/{kelayakanId}/{type}/file', [MahasiswaSeminar::class, 'file'])->name('seminar.kelayakan.file');
+    Route::get('/seminar/{pengajuanId}/kelayakan', [MahasiswaSeminar::class, 'createKelayakan'])->name('seminar.kelayakan.create');
     Route::post('/seminar/{pengajuanId}/kelayakan', [MahasiswaSeminar::class, 'storeKelayakan'])->name('seminar.kelayakan.store');
     Route::get('/seminar/kelayakan/{kelayakanId}/{type}/file', [MahasiswaSeminar::class, 'file'])->name('seminar.kelayakan.file');
     Route::post('/seminar/{pengajuanId}/cancel', [MahasiswaSeminar::class, 'cancel'])->name('seminar.cancel');

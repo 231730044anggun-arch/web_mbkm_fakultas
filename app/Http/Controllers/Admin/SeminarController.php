@@ -21,9 +21,7 @@ class SeminarController extends Controller
         $pengajuans = PengajuanMagang::with(['mahasiswa.user', 'mitra', 'periode', 'bimbingans.dosen.user', 'pembimbingLapangan.user', 'kelayakanSeminar', 'penilaian'])
             ->where(function ($query) {
                 $query->whereIn('status_seminar', ['menunggu_jadwal', 'terjadwal', 'selesai', 'ditunda', 'dibatalkan'])
-                    ->orWhereHas('kelayakanSeminar', fn($kelayakan) => $kelayakan
-                        ->where('status_persetujuan_dosen', 'disetujui')
-                        ->where('status_persetujuan_pembimbing', 'disetujui'));
+                    ->orWhereHas('kelayakanSeminar');
             })
             ->latest()
             ->paginate(15);

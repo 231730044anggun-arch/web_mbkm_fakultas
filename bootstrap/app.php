@@ -17,6 +17,6 @@ return Application::configure(basePath: dirname(__DIR__))
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->render(function (\Illuminate\Http\Exceptions\PostTooLargeException $e, $request) {
-            return back()->with('error', 'Ukuran total upload terlalu besar. Maksimal upload file adalah 100 MB per file dan total request sekitar 110 MB. Jika masih gagal, periksa upload_max_filesize dan post_max_size di hosting.');
+            return back()->with('error', 'Ukuran total upload terlalu besar. Maksimal upload file adalah 100 MB per file dan total request sekitar 350 MB. Jika masih gagal, periksa upload_max_filesize dan post_max_size di hosting.');
         });
     })->create();

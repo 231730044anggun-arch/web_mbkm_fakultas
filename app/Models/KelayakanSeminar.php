@@ -8,11 +8,12 @@ class KelayakanSeminar extends Model
     protected $fillable = [
         'pengajuan_id', 'mahasiswa_id', 'dosen_id', 'pembimbing_lapangan_id',
         'laporan_hasil_magang', 'output_magang', 'produk_magang', 'draft_jurnal', 'catatan_mahasiswa', 'status',
-        'status_persetujuan_dosen', 'catatan_dosen', 'tanggal_persetujuan_dosen',
+        'submitted_at', 'status_persetujuan_dosen', 'catatan_dosen', 'tanggal_persetujuan_dosen',
         'status_persetujuan_pembimbing', 'catatan_pembimbing', 'tanggal_persetujuan_pembimbing',
     ];
 
     protected $casts = [
+        'submitted_at' => 'datetime',
         'tanggal_persetujuan_dosen' => 'datetime',
         'tanggal_persetujuan_pembimbing' => 'datetime',
     ];

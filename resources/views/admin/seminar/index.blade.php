@@ -16,6 +16,7 @@
                     $badge = ['menunggu_jadwal'=>'warning','terjadwal'=>'success','selesai'=>'primary','ditunda'=>'secondary','dibatalkan'=>'dark'];
                     $kelayakanApproved = $pengajuan->kelayakanSeminar?->isApproved();
                     $kelayakanTerlambat = $pengajuan->kelayakanSeminar?->melewatiDeadline() ?? false;
+                    $perluVerifikasiPembimbing = $pengajuan->kelayakanSeminar && (!$pengajuan->kelayakanSeminar->dosen_id || !$pengajuan->kelayakanSeminar->pembimbing_lapangan_id);
                     $statusSeminar = $pengajuan->status_seminar ?: ($kelayakanApproved ? 'menunggu_jadwal' : 'belum');
                     $formatStatus = fn($status) => ucwords(str_replace('_', ' ', $status ?: '-'));
                     $statusLabel = $statusSeminar === 'menunggu_jadwal' && $kelayakanApproved ? 'Siap Dijadwalkan' : $formatStatus($statusSeminar);
@@ -29,6 +30,13 @@
                         Pembimbing Lapangan: {{ $formatStatus($pengajuan->kelayakanSeminar->status_persetujuan_pembimbing ?? '-') }}
                         @if($pengajuan->kelayakanSeminar?->catatan_pembimbing)<br><span class="small text-muted">Catatan pembimbing lapangan: {{ $pengajuan->kelayakanSeminar->catatan_pembimbing }}</span>@endif
                         @if($pengajuan->kelayakanSeminar)
+                            @if($perluVerifikasiPembimbing)
+                                <div class="mt-1"><span class="badge bg-warning text-dark">Perlu Verifikasi Pembimbing</span></div>
+                                <div class="small text-muted mt-1">
+                                    Dosen terbaca: {{ $pengajuan->bimbingans->pluck('dosen.nama_dosen')->filter()->unique()->implode(', ') ?: '-' }}<br>
+                                    Pembimbing lapangan terbaca: {{ $pengajuan->pembimbingLapangan->nama ?? $pengajuan->pic_nama ?? '-' }}
+                                </div>
+                            @endif
                             @if($kelayakanTerlambat)
                                 <div class="mt-1"><span class="badge bg-danger">Terlambat</span></div>
                             @endif

@@ -42,34 +42,7 @@
             <tbody>
                 @forelse($pengajuans as $pengajuan)
                 @php
-                    $isKhusus = $pengajuan->mahasiswa?->isAngkatanKhususSkKolektif();
-                    $kelayakan = $pengajuan->kelayakanSeminar;
-                    $kelayakanLengkap = $kelayakan && filled($kelayakan->laporan_hasil_magang) && filled($kelayakan->output_magang) && filled($kelayakan->produk_magang) && filled($kelayakan->draft_jurnal);
-                    $logbookLengkap = true;
-                    if ($isKhusus) {
-                        $start = $pengajuan->tanggal_mulai ?: $pengajuan->mahasiswa?->defaultTanggalMulaiMagang();
-                        $deadline = $pengajuan->mahasiswa?->deadlineLaporanMagang();
-                        $logbookLengkap = filled($start) && filled($deadline);
-                        if ($logbookLengkap) {
-                            $filledWeeks = $pengajuan->logbooks->mapWithKeys(fn($logbook) => [\Illuminate\Support\Carbon::parse($logbook->tanggal)->startOfWeek()->toDateString() => true]);
-                            for ($cursor = \Illuminate\Support\Carbon::parse($start)->startOfWeek(); $cursor->lessThanOrEqualTo(\Illuminate\Support\Carbon::parse($deadline)); $cursor->addWeek()) {
-                                if (!isset($filledWeeks[$cursor->toDateString()])) {
-                                    $logbookLengkap = false;
-                                    break;
-                                }
-                            }
-                        }
-                    }
-                    $canInput = $isKhusus ? ($pengajuan->penempatanLengkap() && $kelayakanLengkap && $pengajuan->bimbinganFormals->isNotEmpty() && $logbookLengkap) : $pengajuan->hasValidSeminar();
-                    $lockText = $isKhusus
-                        ? (!$pengajuan->penempatanLengkap()
-                            ? 'Penilaian belum dapat dilakukan karena data penempatan magang belum lengkap.'
-                            : (!$kelayakanLengkap
-                                ? 'Penilaian belum dapat dilakukan karena mahasiswa belum mengirim Laporan Hasil Magang, Uraian Output Magang, Produk Magang, dan Draft Jurnal pada menu Seminar Magang.'
-                                : ($pengajuan->bimbinganFormals->isEmpty()
-                                    ? 'Penilaian belum dapat dilakukan karena mahasiswa belum memiliki minimal satu riwayat bimbingan.'
-                                    : 'Penilaian belum dapat dilakukan karena logbook mingguan belum lengkap sampai 26 Juni 2026.')))
-                        : 'Penilaian belum dapat dilakukan karena mahasiswa belum menyelesaikan Seminar Magang.';
+                    $canInput = true;
                 @endphp
                 <tr>
                     <td class="align-top">
@@ -101,14 +74,9 @@
                         @endif
                     </td>
                     <td class="align-top">
-                        @if($canInput)
-                            <div class="assessment-actions">
-                                <a href="{{ route('pembimbing.penilaian.create', $pengajuan->id) }}" class="btn btn-sm btn-primary">{{ $pengajuan->penilaian ? 'Edit Nilai' : 'Input Nilai' }}</a>
-                            </div>
-                        @else
-                            <span class="badge bg-light text-dark border assessment-badge">Terkunci</span>
-                            <div class="small text-muted mt-1">{{ $lockText }}</div>
-                        @endif
+                        <div class="assessment-actions">
+                            <a href="{{ route('pembimbing.penilaian.create', $pengajuan->id) }}" class="btn btn-sm btn-primary">{{ $pengajuan->penilaian ? 'Edit Nilai' : 'Input Nilai' }}</a>
+                        </div>
                     </td>
                 </tr>
                 @empty

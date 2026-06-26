@@ -165,47 +165,7 @@ class PenilaianController extends Controller
 
     private function inputStatus(PengajuanMagang $pengajuan): array
     {
-        if (!$pengajuan->mahasiswa?->isAngkatanKhususSkKolektif()) {
-            return [
-                $pengajuan->status_seminar === 'selesai',
-                'Penilaian belum dapat diproses karena mahasiswa belum menyelesaikan Seminar Magang.',
-            ];
-        }
-
-        if (!$pengajuan->penempatanLengkap()) {
-            return [false, 'Penilaian belum dapat dilakukan karena data penempatan magang belum lengkap.'];
-        }
-
-        $kelayakan = $pengajuan->kelayakanSeminar;
-        if (!$kelayakan || blank($kelayakan->laporan_hasil_magang) || blank($kelayakan->output_magang) || blank($kelayakan->produk_magang) || blank($kelayakan->draft_jurnal)) {
-            return [false, 'Penilaian belum dapat dilakukan karena mahasiswa belum mengirim Laporan Hasil Magang, Uraian Output Magang, Produk Magang, dan Draft Jurnal pada menu Seminar Magang.'];
-        }
-
-        if ($pengajuan->bimbinganFormals->isEmpty()) {
-            return [false, 'Penilaian belum dapat dilakukan karena mahasiswa belum memiliki minimal satu riwayat bimbingan.'];
-        }
-
-        $missingWeeks = $this->missingLogbookWeeks($pengajuan);
-        if ($missingWeeks) {
-            return [false, 'Penilaian belum dapat dilakukan karena logbook mingguan belum lengkap sampai 26 Juni 2026. Minggu yang belum ada entri: ' . implode(', ', $missingWeeks) . '.'];
-        }
-
         return [true, ''];
-    }
-
-    private function missingLogbookWeeks(PengajuanMagang $pengajuan): array
-    {
-        $start = $pengajuan->tanggal_mulai ?: $pengajuan->mahasiswa?->defaultTanggalMulaiMagang();
-        $deadline = $pengajuan->mahasiswa?->deadlineLaporanMagang();
-        if (!$start || !$deadline) return [];
-
-        $filled = $pengajuan->logbooks->mapWithKeys(fn($logbook) => [Carbon::parse($logbook->tanggal)->startOfWeek()->toDateString() => true]);
-        $missing = [];
-        for ($cursor = Carbon::parse($start)->startOfWeek(); $cursor->lessThanOrEqualTo(Carbon::parse($deadline)); $cursor->addWeek()) {
-            if (!isset($filled[$cursor->toDateString()])) $missing[] = $cursor->toDateString();
-        }
-
-        return $missing;
     }
 
     private function rekapAbsensi(PengajuanMagang $pengajuan): array
